@@ -10,6 +10,7 @@ from src.entorno import (
     WIDTH,
     HEIGHT,
     DISTRIBUCION_INICIAL,
+    SEED,
 )
 from src.agentes.comerciante import Comerciante
 from src.agentes.consumidor import Consumidor
@@ -24,8 +25,9 @@ class ModeloGamarra(mesa.Model):
         agresividad_sunat: float = AGRESIVIDAD_SUNAT,
         width: int = WIDTH,
         height: int = HEIGHT,
+        seed: int = SEED,
     ):
-        super().__init__()
+        super().__init__(rng=seed)
         self.grid = mesa.space.MultiGrid(width, height, torus=True)
         self.agresividad_sunat = agresividad_sunat
 
@@ -64,26 +66,42 @@ class ModeloGamarra(mesa.Model):
 
     def step(self):
         self._recaudacion_ciclo = 0
-        self.agents.shuffle_do("step")
+        # Fase 1: mercado — comerciantes ajustan precios, consumidores compran
+        self.agents.select(agent_type=Comerciante).shuffle_do("step")
+        self.agents.select(agent_type=Consumidor).shuffle_do("step")
+        # Fase 2: fiscalización — Sunat lee recaudación acumulada este ciclo
+        self.sunat.step()
         self.datacollector.collect(self)
 
 
 if __name__ == "__main__":
     modelo = ModeloGamarra()
-    N_CICLOS = 100
+    N_CICLOS = 1000
     for _ in range(N_CICLOS):
         modelo.step()
 
     df = modelo.datacollector.get_model_vars_dataframe()
-    print(df.tail(5))
-    print("\n--- Resumen final ---")
-    print(f"Formal:       {df['pct_formal'].iloc[-1]:.1f}%")
-    print(f"Informal:     {df['pct_informal'].iloc[-1]:.1f}%")
-    print(f"Evasor:       {df['pct_evasor'].iloc[-1]:.1f}%")
-    print(f"Fondo público: S/. {df['fondo_publico'].iloc[-1]:.1f}")
+    print("--- Trayectoria ---")
+    print(f"Ciclo 0:   formal {df['pct_formal'].iloc[0]:5.1f}%  informal {df['pct_informal'].iloc[0]:5.1f}%  evasor {df['pct_evasor'].iloc[0]:5.1f}%  fondo {df['fondo_publico'].iloc[0]:8.1f}")
+    print(f"Ciclo 100: formal {df['pct_formal'].iloc[100]:5.1f}%  informal {df['pct_informal'].iloc[100]:5.1f}%  evasor {df['pct_evasor'].iloc[100]:5.1f}%  fondo {df['fondo_publico'].iloc[100]:8.1f}")
+    print(f"Ciclo 500: formal {df['pct_formal'].iloc[500]:5.1f}%  informal {df['pct_informal'].iloc[500]:5.1f}%  evasor {df['pct_evasor'].iloc[500]:5.1f}%  fondo {df['fondo_publico'].iloc[500]:8.1f}")
+    print(f"Ciclo 999: formal {df['pct_formal'].iloc[-1]:5.1f}%  informal {df['pct_informal'].iloc[-1]:5.1f}%  evasor {df['pct_evasor'].iloc[-1]:5.1f}%  fondo {df['fondo_publico'].iloc[-1]:8.1f}")
 
-    # ponytail: self-check mínimo
+    print("\n--- Promedios últimos 100 ciclos ---")
+    tail = df.tail(100)
+    print(f"Formal:       {tail['pct_formal'].mean():.1f}%")
+    print(f"Informal:     {tail['pct_informal'].mean():.1f}%")
+    print(f"Evasor:       {tail['pct_evasor'].mean():.1f}%")
+    print(f"Fondo público: S/. {tail['fondo_publico'].mean():.1f}")
+    print(f"Recaudación:   S/. {tail['recaudacion'].mean():.1f}")
+
+    # ponytail: self-check — valida que hay dinámica viva y rangos sensatos
+    assert len(df) == N_CICLOS, f"Esperaba {N_CICLOS} filas, hay {len(df)}"
     for col in ["pct_formal", "pct_informal", "pct_evasor"]:
         assert 0 <= df[col].iloc[-1] <= 100, f"{col} fuera de rango"
-    assert len(df) == N_CICLOS, f"Esperaba {N_CICLOS} filas, hay {len(df)}"
-    print("\n✓ Esqueleto dividido funciona end-to-end")
+    # la informalidad no debe colapsar a 0 ni saturar al 100% — el trilema existe
+    inf_final = tail["pct_informal"].mean() + tail["pct_evasor"].mean()
+    assert 10 < inf_final < 95, f"Informalidad total {inf_final:.1f}% fuera de rango esperado"
+    # el Fondo Público no debe colapsar a negativo indefinidamente
+    assert df["fondo_publico"].iloc[-1] > -1e6, "Fondo colapsado sin control"
+    print("\n✓ Dinámica viva: el trilema produce equilibrio no trivial")

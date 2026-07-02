@@ -1,28 +1,52 @@
-"""P1 — Comerciante. 3 estrategias: formal / informal / evasor."""
+"""P1 — Comerciante. 3 estrategias: formal / informal / evasor.
+
+Dinámica:
+- Formal: cobra IGV (precio +18%), lo transfiere al estado, paga costo de formalidad.
+- Informal: precio base, sin IGV ni costo. Riesgo: multa si lo fiscalizan.
+- Evasor: cobra medio IGV (precio +9%), no lo paga. Riesgo: multa mayor.
+"""
 import mesa
-from src.entorno import IGV, PRECIO_BASE, DINERO_INICIAL_COMERCIANTE, COSTO_FORMALIDAD
+from src.entorno import (
+    IGV,
+    PRECIO_BASE,
+    DINERO_INICIAL_COMERCIANTE,
+    COSTO_FORMALIDAD,
+    P_CAMBIO_ESTRATEGIA,
+    UMBRAL_QUIEBRA,
+)
 
 
 class Comerciante(mesa.Agent):
     def __init__(self, model, tipo: str = "informal"):
         super().__init__(model)
-        self.tipo = tipo  # formal / informal / evasor
+        self.tipo = tipo
         self.precio = PRECIO_BASE
         self.dinero = DINERO_INICIAL_COMERCIANTE
+        self.dinero_prev = DINERO_INICIAL_COMERCIANTE
+        self.multado_recientemente = False
 
     def calcular_precio(self, igv: float = IGV) -> float:
-        # ponytail: placeholder — P1 implementa costos reales según tipo
         markup = {"formal": 1.0 + igv, "informal": 1.0, "evasor": 1.0 + igv * 0.5}[self.tipo]
         self.precio = PRECIO_BASE * markup
         return self.precio
 
-    def decidir_estrategia(self, rentabilidad: dict) -> None:
-        # ponytail: placeholder — P1 implementa lógica de cambio de tipo
-        # rentabilidad = {"formal": float, "informal": float, "evasor": float}
-        if rentabilidad.get(self.tipo, 0) < 0:
-            self.tipo = max(rentabilidad, key=rentabilidad.get)
+    def decidir_estrategia(self) -> None:
+        # ponytail: reglas deterministas basadas en desempeño, sin churn aleatorio
+        if self.multado_recientemente and self.tipo in ("evasor", "informal"):
+            if self.dinero > COSTO_FORMALIDAD * 3:
+                self.tipo = "formal"  # aprendió la lección y puede pagar
+            else:
+                self.tipo = "informal"  # no le alcanza para formalizar
+        elif self.tipo == "formal" and self.dinero < DINERO_INICIAL_COMERCIANTE * UMBRAL_QUIEBRA:
+            self.tipo = "informal"  # no banca el costo de formalidad
+        elif self.tipo == "informal" and self.dinero > DINERO_INICIAL_COMERCIANTE * 1.5:
+            if self.random.random() < P_CAMBIO_ESTRATEGIA:
+                self.tipo = "evasor"  # probando margen extra cuando va bien
 
     def step(self):
-        # ponytail: placeholder
+        self.dinero_prev = self.dinero
         self.calcular_precio()
-        self.dinero -= COSTO_FORMALIDAD if self.tipo == "formal" else 0
+        if self.tipo == "formal":
+            self.dinero -= COSTO_FORMALIDAD
+        self.decidir_estrategia()
+        self.multado_recientemente = False  # reset al final: el flag de Sunat sobrevive hasta la decisión
