@@ -140,127 +140,134 @@ modelo debe reflejar:
 
 ### Equilibrio del modelo (1000 ciclos, parámetros default)
 
-Tras calibrar contra datos del sistema tributario peruano (§1bis), el modelo alcanza
-el siguiente equilibrio en los últimos 100 ciclos de una corrida de 1000:
+Tras migrar al modelo con valores reales (UIT 5500, RMV 1130, Logit Multinomial,
+gradualidad y discrecionalidad), el equilibrio en los últimos 100 ciclos:
 
 | Métrica | Modelo | Dato real (INEI/SUNAT) | Gap |
 |---|---|---|---|
-| Informalidad (informal + evasor) | **63.3%** | **70.2%** (EPEN 2025) | −6.9 pp |
-| Formal | 36.7% | ~29.8% (complemento) | +6.9 pp |
-| Evasor | 2.2% | (incluido en informal INEI) | — |
-| IGV recaudado/ciclo | S/ 17–21 | — | — |
-| Fondo Público (SUNAT) | S/ 560 (cap 500) | — | — |
+| Informalidad (informal + evasor) | **65.5%** | **70.2%** (EPEN 2025) | −4.7 pp |
+| Formal | 34.5% | ~29.8% (complemento) | +4.7 pp |
+| Evasor | 53.4% | (incluido en informal INEI) | — |
+| Informal puro | 12.1% | — | — |
+| Recaudación/ciclo | S/ 37,771 | — | — |
+| Multas/ciclo | 9,664 | — | — |
+| Actas preventivas/ciclo | 4,119 | — | — |
 
-El modelo reproduce el **rango** del fenómeno (informalidad mayoritaria ~60-70%) pero
-subestima ligeramente. El gap del 6.9% se atribuye a mecanismos aún no modelados
-(nuevos entrantes informales, heterogeneidad sectorial, costos de entrada a
-formalidad) y se cierra en Fase 3 con sweep fino de `P_RELAJACION` y `W_MORAL`.
+El modelo reproduce el rango del fenómeno (informalidad mayoritaria ~65-70%) con un
+gap de solo 4.7 pp. Los tres tipos coexisten: el **evasor** (53%) domina como
+estrategía racional de riesgo-recompensa, el **formal** (35%) sostiene el sector
+legal, y el **informal puro** (12%) representa al comercio ambulatorio no registrado.
 
 ### Respuesta al parámetro de política (`agresividad_sunat`)
 
-El modelo responde correctamente a la intensidad de fiscalización:
-
-| Agresividad | % Formal | % Informal + Evasor | Interpretación |
-|---|---|---|---|
-| 0.1 (débil, default) | 37.6% | **62.4%** | Cerca del 70% INEI — fiscalización testimonial |
-| 0.3 | 42.1% | 57.9% | — |
-| 0.5 | 52.0% | 48.0% | Cruce: formalidad supera informalidad |
-| 0.9 (agresiva) | 53.7% | 46.3% | Tope: enforcement fuerte no elimina informalidad |
-
-**Lectura:** duplicar la agresividad (0.1→0.5) reduce la informalidad en ~14 pp,
-pero a partir de 0.5 hay rendimientos decrecientes. El enforcement fuerte solo
-no basta para erradicar la informalidad — valida por qué la meta del 50% es "lejana".
-
-### Trayectoria temporal (default, agresividad 0.1)
-
-| Ciclo | Formal | Informal | Evasor | Fondo |
+| Agresividad | % Formal | % Evasor | % Informal | Informalidad total |
 |---|---|---|---|---|
-| 0 | 13.3% | 63.3% | 23.3% | S/ 319 |
-| 100 | 46.7% | 51.7% | 1.7% | S/ 548 |
-| 500 | 41.7% | 56.7% | 1.7% | S/ 548 |
-| 999 | 35.0% | 61.7% | 3.3% | S/ 596 |
+| 0.25 (baja) | 31% | 53% | 16% | **69%** |
+| 0.55 (default) | 34% | 53% | 13% | **66%** |
+| 0.80 (alta) | 35% | 55% | 10% | **65%** |
 
-La simulación muestra una transición: los evasores iniciales son rápidamente
-fiscalizados y formalizados (ciclo 0→100), luego el sistema oscila alrededor del
-equilibrio ~37/61/2 conforme los formales se relajan y los informales son
-esporádicamente fiscalizados.
+**Lectura:** el modelo responde a la fiscalización, pero con **rendimientos
+decrecientes**: subir la agresividad de 0.25 a 0.80 solo reduce 4 pp de
+informalidad. Esto valida la conclusión del marco teórico: la fiscalización
+punitiva sola no resuelve el problema — se necesitan reformas estructurales.
+
+### Trayectoria temporal (default)
+
+| Ciclo | Formal | Evasor | Informal | Recaudación |
+|---|---|---|---|---|
+| 0 | ~25% | ~25% | ~50% | — |
+| 100 | 37.5% | 55.0% | 7.5% | S/ 26,056 |
+| 500 | 20.0% | 60.0% | 20.0% | S/ 41,450 |
+| 999 | 37.5% | 55.0% | 7.5% | S/ 30,011 |
+
+El sistema oscila alrededor del equilibrio ~35/53/12: los informales puros son
+fiscalizados y forzados a evasores (registro aparente), algunos evasores son
+auditados y formalizados, y los formales con baja rentabilidad relajan su cumplimiento.
 
 ---
 
-## 1quater. Hallazgos del Modelo
+## 1quater. Análisis de Dinámicas No Lineales e Insights Sistémicos
 
-La calibración reveló cinco dinámicas emergentes que el modelo hace visibles:
+### El umbral de asfixia formal y el enanismo empresarial
 
-### 1. El enforcement solo no sostiene la formalidad (puerta giratoria)
+El modelo evidencia un "umbral de asfixia formal" para microempresas. Con un
+trabajador bajo REMYPE, el costo laboral mensual asciende a S/ 1,192 (RMV 1,130 +
+SIS 15 + vacaciones prorrateadas S/ 47). Sumando contabilidad (S/ 200), la carga
+fija total supera S/ 1,392/mes — **más del 35% de la facturación típica** de un
+comerciante minorista de Gamarra (S/ 4,000/mes).
 
-Cuando se fiscaliza, los informales son multados y se formalizan. Pero si el mercado
-no sostiene la formalidad (sobrofererta, márgenes estrechos), vuelven a informal
-rápidamente. **El enforcement sin viabilidad económica de la formalidad produce
-churn, no reducción estructural.** Esto explica por qué operativos puntuales de
-SUNAT en Gamarra no tienen efecto duradero.
+Con márgenes comerciales de 15-20% (alta competencia + subvaluación de importados),
+el formal opera con **pérdidas netas sistemáticas** o debe subir precios, perdiendo
+competitividad frente al informal. El resultado: **formalizarse plenamente es una
+ruta hacia la inviabilidad financiera** para la microempresa. El modelo reproduce
+esto: el parámetro `COSTO_FIJO_FORMALIDAD` hace que la utilidad esperada del formal
+sea estructuralmente menor, y solo los comerciantes con alto volumen de ventas
+pueden sostenerla.
 
-### 2. La relajación: los formales se "des-formalizan" si perciben bajo riesgo
+### El círculo vicioso de la moral tributaria
 
-El parámetro `P_RELAJACION=0.06` modela que un formal no auditado tiene 6% de
-probabilidad por ciclo de dejar de pagar (volverse informal). Sin este flujo de
-retorno, el modelo converge a 100% formal (carrilaje unidireccional). **La
-formalidad requiere enforcement permanente, no campañas puntuales** — cuando
-SUNAT se retira, los formales se relajan. Es el espejo informal del "círculo
-virtuoso": sin presión持续的, la formalidad se erosiona.
+La interacción dinámica entre comerciantes y consumidores genera un círculo vicioso:
+cuando la densidad de informales/evasores es alta, la base imponible se contrae →
+menos recaudación → menos servicios públicos → percepción de que el Estado no
+devuelve → **moral tributaria cae** → consumidores priorizan precio (no exigen
+comprobante) → el informal puede vender más barato (sin IGV 18%) → captura demanda
+→ el formal se asfixia por falta de clientes.
 
-### 3. La sobrofererta reproduce el enanismo empresarial
+En el modelo, `PESO_PRECIO=0.80` y `PESO_MORAL=0.20` con moral `uniform(0.05, 0.35)`
+reproducen este círculo: el consumidor pobre prefiere el bien informal (15% más
+barato) y rara vez exige boleta. El bien informal funciona como un **subsidio
+directo de mercado** a la economía familiar.
 
-Con `N_COMERCIANTES=60` y `N_CONSUMIDORES=40` (ratio 1.5:1), cada comerciante vende
-~0.67 unidades/ciclo. El formal, que paga `COSTO_FORMALIDAD=6`, necesita vender
-~0.6 unidades solo para cubrir el costo — operando en el margen. **El exceso de
-oferta hace la formalidad estructuralmente inviable para la mayoría**, validando
-el dato del INEI: 88.8% de informalidad en empresas de 1-10 trabajadores.
+### Evasión sofisticada vs. destrucción de capital
 
-### 4. El Fondo Público tiene techo natural
+La simulación de alta presión fiscal revela **dos distorsiones** que agravan el
+problema en lugar de solucionarlo:
 
-Sin `FONDO_MAX`, el Fondo crece indefinidamente: IGV de formales → más presupuesto
-SUNAT → más fiscalización → más formales → más IGV (feedback positivo). El cap
-(500) representa que el exceso presupuestario se redistribuye a otras partidas del
-Estado, no se reinvierte todo en fiscalizar un solo mercado. **Sin este techo, el
-modelo predice erróneamente la eliminación de la informalidad por enforcement
-creciente.**
+1. **Tránsito a evasión sofisticada:** los comerciantes con capital suficiente se
+   registran en NRUS/RER (RUC aparente) para neutralizar el riesgo de cierre o
+   comiso, pero **siguen subdeclarando masivamente** (alpha=60% de ventas no
+   reportadas). La fiscalización punitiva solo incrementa los costos transaccionales
+   sin elevar genuinamente la recaudación. En el modelo, esto se observa cuando los
+   informales fiscalizados son forzados a "evasor" (no a "formal") — registro
+   aparente, evasión continúa.
 
-### 5. Los consumidores determinan el equilibrio tanto como SUNAT
+2. **Destrucción de capital:** los informales de menor escala, incapaces de absorber
+   la multa (S/ 2,750 = 50% UIT), sufren **colapso financiero y quiebra**. En el
+   modelo, `min(multa, capital)` implica que el comerciante con poco capital pierde
+   todo. Estos agentes desempleados se reincorporan como ambulantes móviles,
+   expandiendo la informalidad fuera del control municipal.
 
-Con `W_PRECIO=0.85` (consumidor pobre que busca barato) y `W_MORAL=0.1` (baja
-cultura tributaria), la demanda favorece estructuralmente al informal. **Subir la
-moral tributaria** (exigir comprobantes, educación fiscal) es la palanca más
-eficaz después del enforcement: mover `W_MORAL` de 0.1 a 0.3 reduce la
-informalidad más que doblar `AGRESIVIDAD_SUNAT` de 0.1 a 0.5 (a validar en Fase 3).
+**Conclusión:** la coacción fiscal como única herramienta genera un sistema
+inestable — o evasión sofisticada o quiebra masiva. Ninguna reduce estructuralmente
+la informalidad.
 
-### Implicaciones de política pública
+### Implicaciones de política pública (4 recomendaciones)
 
-El modelo sugiere que reducir la informalidad requiere **actuar en los tres frentes
-simultáneamente**, no solo en uno:
+El trilema fundamental: el regulador **no puede maximizar simultáneamente** la
+recaudación, los estándares formales, y la estabilidad del empleo microempresarial.
+Cuatro recomendaciones emergen del modelo:
 
-1. **Enforcement sostenido** (no campañas puntuales) — evita la relajación.
-2. **Reducir el costo de formalidad** (simplificar régimenes, NRUS accesible) —
-   hace la formalidad viable para microempresas.
-3. **Aumentar la demanda por bienes formales** (cultura tributaria, poder
-   adquisitivo) — los consumidores sostienen el sector formal.
+1. **Sustituir multas por capacitación voluntaria.** Consolidar las facultades
+   preventivas de SUNAT (`tasa_discrecionalidad`): actas preventivas en lugar de
+   multas en primera infracción. En el modelo, esto reduce la destrucción de capital
+   sin eliminar la señalización de incumplimiento.
 
-Ninguna palanca aislada basta. Esto valida por qué la meta del gobierno de reducir
-la informalidad al 50% se considera "lejana": requeriría cambios estructurales en
-los tres frentes al mismo tiempo, no solo más fiscalización.
+2. **Atenuar la brecha del costo laboral.** Mantener el SIS en S/ 15/mes y
+   cofinanciar los aportes previsionales durante los primeros 3 años de REMYPE.
+   Reducir `COSTO_FIJO_FORMALIDAD` hace la formalidad viable para más comerciantes.
 
-### Limitaciones del modelo actual
+3. **Simplificar y unificar regímenes tributarios.** Fusionar RER y RMT en un
+   régimen progresivo único, eliminando los topes rígidos que incentivan la
+   fragmentación artificial de empresas para evitar el salto de tramo.
 
-- **Gap del 6.9%** vs INEI: se cierra con sweep fino en Fase 3.
-- **No modela:** nuevos entrantes informales (natalidad empresarial), heterogeneidad
-  sectorial (comercio vs servicios), cadenas de valor, estacionalidad, sector externo.
-- **Heterogeneidad de moral:** la moral tributaria es uniforme U(0,1); en realidad
-  varía por nivel socioeconómico y zona.
-- **Escalas absolutas:** los valores monetarios del modelo son abstractos (no son
-  soles reales); el mapeo a S/ se hace por ratios, no por magnitudes.
+4. **Estimular la moral tributaria activa.** Fortalecer los sorteos virtuales de
+   comprobantes y devolver un % del IGV a consumidores que exijan boleta. Elevar
+   `PESO_MORAL` de 0.20 a 0.40 reduce la informalidad más que doblar
+   `AGRESIVIDAD_SUNAT` (a validar en Fase 3).
 
-**Trabajo futuro (Fase 3):** sweep sistemático de `P_RELAJACION`, `W_MORAL` y
-`APROPIACION_SUNAT`; añadir natalidad empresarial (nuevos agentes informales);
-heterogeneidad de moral tributaria por nivel socioeconómico.
+**Ninguna palanca aislada basta.** Reducir la informalidad al 50% (meta del
+gobierno) requiere actuar en los tres frentes simultáneamente: enforcement
+sostenido + reducción de costos formales + cultura tributaria.
 
 ---
 

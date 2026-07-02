@@ -1,19 +1,16 @@
-"""P3 — Sunat. Fiscalización + Fondo Público.
+"""Sunat. Fiscalización con gradualidad y discrecionalidad.
 
-Fondo Público se alimenta del IGV recaudado (SHARE_IGV_A_SUNAT) + multas,
-y se consume por cada fiscalización (COSTO_FISCALIZACION).
-Prioriza evasores; la agresividad abre el blanco a informales.
+Cobertura = agresividad_sunat (% de comercios auditados/ciclo).
+- Informal detectado: multa con gradualidad (90% rebaja), forzado a evasor.
+- Evasor auditado: multa = 50% del IGV omitido, o acta preventiva (discrecionalidad).
 """
 import mesa
 from src.entorno import (
-    PRESUPUESTO_FISCALIZACION,
-    FONDO_MAX,
-    APROPIACION_SUNAT,
-    MULTA_EVASOR,
-    MULTA_INFORMAL,
-    COSTO_FISCALIZACION,
-    SHARE_IGV_A_SUNAT,
-    N_FISCALIZACIONES_POR_CICLO,
+    TASA_IGV,
+    MULTA_NO_EMISION,
+    DESCUENTO_GRADUALIDAD,
+    MULTA_EVASION_PCT,
+    AGRESIVIDAD_SUNAT,
 )
 from src.agentes.comerciante import Comerciante
 
@@ -21,52 +18,43 @@ from src.agentes.comerciante import Comerciante
 class Sunat(mesa.Agent):
     def __init__(self, model):
         super().__init__(model)
-        self.presupuesto_fiscalizacion = PRESUPUESTO_FISCALIZACION
+        self.tasa_cobertura = AGRESIVIDAD_SUNAT
+        self.multas_emitidas = 0
+        self.cierres_ejecutados = 0
+        self.actas_preventivas = 0
 
-    def seleccionar_objetivos(self, comerciantes: list) -> list:
-        if self.presupuesto_fiscalizacion < COSTO_FISCALIZACION:
-            return []  # ponytail: Fondo colapsado = círculo vicioso
-        n_max = min(
-            N_FISCALIZACIONES_POR_CICLO,
-            int(self.presupuesto_fiscalizacion / COSTO_FISCALIZACION),
-            len(comerciantes),
-        )
-        evasores = [c for c in comerciantes if c.tipo == "evasor"]
-        informales = [c for c in comerciantes if c.tipo == "informal"]
-        objetivos = list(evasores[:n_max])  # prioridad absoluta: evasores
-        # slots restantes: cada uno fiscaliza un informal con prob = agresividad
-        remaining = n_max - len(objetivos)
-        pool = list(informales)
-        for _ in range(remaining):
-            if not pool:
-                break
-            if self.random.random() < self.model.agresividad_sunat:
-                obj = self.random.choice(pool)
-                objetivos.append(obj)
-                pool.remove(obj)
-        return objetivos
+    def fiscalizar_mercado(self) -> None:
+        comerciantes = list(self.model.agents.select(agent_type=Comerciante))
+        if not comerciantes:
+            return
+        n_auditorias = int(len(comerciantes) * self.tasa_cobertura)
+        muestra = self.random.sample(comerciantes, min(n_auditorias, len(comerciantes)))
 
-    def aplicar_multa(self, objetivo: Comerciante) -> float:
-        if objetivo.tipo == "evasor":
-            multa = MULTA_EVASOR
-        elif objetivo.tipo == "informal":
-            multa = MULTA_INFORMAL
-        else:
-            return 0.0
-        cobrado = min(multa, objetivo.dinero)
-        objetivo.dinero -= cobrado
-        objetivo.multado_recientemente = True
-        self.presupuesto_fiscalizacion += cobrado
-        return cobrado
+        for c in muestra:
+            if c.estrategia == "informal":
+                # Multa: fija + proporcional a ingresos (comiso) — escala con volumen
+                if self.random.random() < self.model.tasa_discrecionalidad:
+                    self.actas_preventivas += 1
+                else:
+                    multa = MULTA_NO_EMISION + 0.50 * (c.ingresos_ocultos + c.ingresos_declarados)
+                    cobrado = min(multa, c.capital)
+                    c.capital -= cobrado
+                    c.multas_pagadas += cobrado
+                    self.model.recaudacion_ciclo += cobrado
+                    self.multas_emitidas += 1
+                c.estrategia = "evasor"  # forzado a registro aparente
+
+            elif c.estrategia == "evasor":
+                # Multa proporcional a ingresos ocultos (más disuasiva que solo IGV omitido)
+                multa = c.ingresos_ocultos * MULTA_EVASION_PCT
+                if self.random.random() < self.model.tasa_discrecionalidad:
+                    self.actas_preventivas += 1  # acta preventiva, sin multa
+                else:
+                    cobrado = min(multa, c.capital)
+                    c.capital -= cobrado
+                    c.multas_pagadas += cobrado
+                    self.model.recaudacion_ciclo += cobrado
+                    self.multas_emitidas += 1
 
     def step(self):
-        # Fondo se alimenta de: apropiación estatal + IGV recaudado + multas - costo fiscalización
-        self.presupuesto_fiscalizacion += APROPIACION_SUNAT
-        self.presupuesto_fiscalizacion += self.model._recaudacion_ciclo * SHARE_IGV_A_SUNAT
-        # ponytail: cap al Fondo — el exceso se redistribuye a otras partidas del Estado
-        self.presupuesto_fiscalizacion = min(self.presupuesto_fiscalizacion, FONDO_MAX)
-        comerciantes = list(self.model.agents.select(agent_type=Comerciante))
-        objetivos = self.seleccionar_objetivos(comerciantes)
-        self.presupuesto_fiscalizacion -= len(objetivos) * COSTO_FISCALIZACION
-        for obj in objetivos:
-            self.aplicar_multa(obj)
+        self.fiscalizar_mercado()

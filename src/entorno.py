@@ -1,43 +1,57 @@
-"""Parámetros centralizados del modelo. Calibrados contra datos reales del Perú.
+"""Módulo de parametrización económica, impositiva y laboral. Bienio 2025-2026.
 
-Fuentes: INEI (EPEN 2025), SUNAT (Tabla de Infracciones), MEF (UIT 2025).
-Ver marco teórico en informe_proyecto_gamarra.md §1bis.
+Valores cuantitativos reflejan los decretos supremos vigentes en el Perú.
+Fuentes: INEI (EPEN 2025), SUNAT (Código Tributario), MEF (UIT/RMV).
+Ver marco teórico en informe_proyecto_gamarra.md.
 """
 
-# Tributación (Perú, 2025-2026)
-IGV = 0.18  # 18% vigente (16% IGV + 2% IPM)
-UIT = 5350.0  # S/ 5,350 en 2025 (D.S. N° 380-2024-EF) — referencia para multas
+# Parámetros macroeconómicos y tributarios peruanos
+UIT_2025 = 5350.0  # D.S. N° 260-2024-EF
+UIT_2026 = 5500.0  # D.S. N° 301-2025-EF
+RMV_2025 = 1130.0  # D.S. N° 006-2024-TR
 
-# Comerciante — calibrado a microempresa típica de Gamarra
-PRECIO_BASE = 10.0
-DINERO_INICIAL_COMERCIANTE = 80.0  # enanismo: colchón bajo, sin escala
-COSTO_FORMALIDAD = 6.0            # ~30% de ingresos/ciclo (NRUS + Essalud + contabilidad)
-DISTRIBUCION_INICIAL = {"formal": 0.2, "informal": 0.6, "evasor": 0.2}  # ~80% no-formal (INEI)
-P_CAMBIO_ESTRATEGIA = 0.05        # prob. de probar evasión cuando va bien
-P_RELAJACION = 0.06              # prob. de que un formal no auditado se relaje a informal
-UMBRAL_QUIEBRA = 0.3              # fracción de DINERO_INICIAL bajo la cual abandona formalidad
+# Selección temporal del simulador: año fiscal 2026
+UIT_VIGENTE = UIT_2026
+RMV_VIGENTE = RMV_2025
+TASA_IGV = 0.18  # 18% (16% IGV + 2% IPM)
 
-# Consumidor — calibrado a baja moral tributaria y preferencia por precio (pobreza)
-PRESUPUESTO_INICIAL = 30.0
-INGRESO_CONSUMIDOR = 11.0         # marginal: alcanza informal (10) pero formal (11.8) apreta
-W_PRECIO = 0.85                   # peso del precio (consumidor pobre busca barato, camina el mercado)
-W_MORAL = 0.1                     # peso de moral tributaria (baja cultura tributaria)
-W_DIST = 0.05                     # peso de distancia (Gamarra: se camina comparando)
+# Costos laborales bajo REMYPE microempresa (un trabajador)
+COSTO_SIS_EMPLEADOR = 15.00  # SIS Microempresa, pago mensual fijo
+VACACIONES_PROVISION = (RMV_VIGENTE / 30.0) * 15.0 / 12.0  # 15 días anuales prorrateados ≈ 47.08
+COSTO_LABORAL_MENSUAL = RMV_VIGENTE + COSTO_SIS_EMPLEADOR + VACACIONES_PROVISION  # ≈ 1192.08
 
-# Sunat / fiscalización — calibrado a débil capacidad de fiscalización
-PRESUPUESTO_FISCALIZACION = 200.0  # presupuesto inicial bajo
-FONDO_MAX = 500.0                 # cap: el exceso se redistribuye a otras partidas del Estado
-APROPIACION_SUNAT = 10.0          # financiamiento estatal fijo por ciclo (limitado)
-MULTA_EVASOR = 60.0               # ~3 ciclos de ingresos (50% UIT escalado al modelo)
-MULTA_INFORMAL = 30.0             # ~1.5 ciclos de ingresos
-COSTO_FISCALIZACION = 12.0        # costo operativo por objetivo fiscalizado
-SHARE_IGV_A_SUNAT = 0.3           # fracción del IGV que recicla al Fondo
-N_FISCALIZACIONES_POR_CICLO = 3   # capacidad limitada (SUNAT no llega a todos)
+# Costo administrativo: contabilidad + trámites mensuales
+COSTO_ADMINISTRATIVO_CONTABLE = 200.00
+
+# Costo fijo total mensual de operar formal (promedio: unipersonal + REMYPE con 1 trabajador)
+COSTO_FIJO_FORMALIDAD = 400.00  # contabilidad S/200 + NRUS/trámites S/100 + aportes promedio S/100
+
+# Estructura de sanciones (Código Tributario Art. 174)
+MULTA_NO_EMISION = 0.50 * UIT_VIGENTE  # S/ 2750 — no emitir comprobante
+DESCUENTO_GRADUALIDAD = 0.90  # rebaja 90% por subsanación voluntaria
+MULTA_EVASION_PCT = 0.30  # 30% de ingresos ocultos (sanción sobre evasión parcial)
+
+# Comerciante
+PRECIO_BASE = 30.0  # precio neto de una prenda (margen comercial Gamarra)
+COSTO_UNITARIO = 12.0  # costo de adquisición de materia prima / prenda
+CAPITAL_INICIAL = 4000.0  # colchón financiero típico (enanismo: sin escala)
+ALPHA_EVASION = 0.60  # fracción de ventas no reportadas por evasor
+DISTRIBUCION_INICIAL = ["formal", "evasor", "informal", "informal"]  # 25/25/50
+
+# Consumidor
+PRESUPUESTO_MEDIA = 200.0
+PRESUPUESTO_DESV = 40.0
+MORAL_MIN = 0.05
+MORAL_MAX = 0.35  # moral tributaria baja y heterogénea (encuestas)
 
 # Modelo
-N_COMERCIANTES = 60               # sobrofererta: muchos puestos compitiendo (Gamarra real)
-N_CONSUMIDORES = 40
-AGRESIVIDAD_SUNAT = 0.1           # baja: SUNAT apenas llega a microcomerciantes (realidad peruana)
+N_COMERCIANTES = 40
+N_CONSUMIDORES = 800  # Gamarra recibe miles de compradores/día — volumen suficiente para viabilidad formal
+AGRESIVIDAD_SUNAT = 0.55  # % de comercios auditados por ciclo
+TASA_DISCRECIONALIDAD = 0.30  # prob. de acta preventiva vs multa (primera infracción)
+SENSIBILIDAD_MERCADO = 3.0  # beta del Logit Multinomial (racionalidad limitada)
+PESO_PRECIO = 0.80
+PESO_MORAL = 0.20
 WIDTH = 15
 HEIGHT = 15
-SEED = 42                         # semilla para reproducibilidad
+SEED = 42
