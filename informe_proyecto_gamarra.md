@@ -8,7 +8,9 @@
 Este proyecto modela mediante un Sistema Multiagente (MAS) la dinámica de informalidad
 empresarial y evasión tributaria en el Perú, usando tres tipos de agentes (Comerciantes,
 Consumidores, Fiscalizador) que interactúan en ciclos discretos dentro de un entorno
-económico simplificado.
+económico simplificado. El modelo usa valores reales en soles (UIT, RMV, IGV, multas del
+Código Tributario), decisión por Logit Multinomial, y fiscalización con gradualidad y
+discrecionalidad según la normatividad vigente.
 
 **Justificación empírica (verificada con fuentes oficiales, julio 2026):**
 
@@ -22,10 +24,19 @@ económico simplificado.
 - IGV vigente: 18%.
 
 Estos datos se desarrollan y contrastan contra el modelo en las secciones §1bis
-(marco teórico y mapeo a parámetros) y §1ter–1quater (resultados de calibración
-y hallazgos). El equilibrio del modelo alcanza **63.3% de informalidad**, a 6.9 pp
-del dato INEI, cerrando el rango del fenómeno y reproduciendo la dinámica de
-respuesta a la intensidad de fiscalización.
+(marco teórico y mapeo a parámetros), §1ter–1quater (resultados de calibración
+y hallazgos) y §1quinquies (comparación de políticas). El equilibrio del modelo
+alcanza **65.5% de informalidad**, a solo 4.7 pp del dato INEI, con los tres tipos
+coexistiendo: 34.5% formal, 53.4% evasor, 12.1% informal puro.
+
+**Componentes del proyecto:**
+
+- Modelo MAS modular en `src/` (Mesa 3.5, Python 3.14)
+- **3 políticas activables**: beneficio por antigüedad formal, sorteo de comprobantes,
+  multa progresiva por reincidencia
+- **Dashboard interactivo** (Solara): grid visual en tiempo real, 19 sliders, 6 presets
+- **Notebook auto-contenido** (`trilema_gamarra.ipynb`): ejecutable en Google Colab sin
+  pre-configuración
 
 ---
 
@@ -104,22 +115,24 @@ modelo debe reflejar:
 
 | Causa real | Parámetro en `entorno.py` | Valor calibrado |
 |---|---|---|
-| IGV del 18% | `IGV` | 0.18 |
-| Costos fijos de formalidad | `COSTO_FORMALIDAD` | 6.0 (~30% de ingresos/ciclo) |
-| Multa por no emitir comprobante (50% UIT) | `MULTA_EVASOR` | 60.0 (~3 ciclos de ingresos) |
-| Multa a informal detectado | `MULTA_INFORMAL` | 30.0 (~1.5 ciclos de ingresos) |
-| Débil fiscalización | `N_FISCALIZACIONES_POR_CICLO` | 3 |
-| | `AGRESIVIDAD_SUNAT` | 0.1 (SUNAT no llega a microcomerciantes) |
-| Presupuesto SUNAT limitado | `APROPIACION_SUNAT` | 10.0/ciclo |
-| | `FONDO_MAX` | 500.0 (cap: el exceso se redistribuye) |
-| Costo operativo por fiscalización | `COSTO_FISCALIZACION` | 12.0 |
-| Baja moral tributaria | `W_MORAL` | 0.1 |
-| Preferencia por precio bajo (pobreza) | `W_PRECIO` | 0.85 |
-| (Gamarra: se camina comparando) | `W_DIST` | 0.05 |
-| Enanismo (microempresa típica) | `DINERO_INICIAL_COMERCIANTE` | 80.0 (colchón bajo) |
-| Sobrofererta de puestos | `N_COMERCIANTES` / `N_CONSUMIDORES` | 60 / 40 (ratio 1.5:1) |
-| Relajación: formal deja de pagar si no hay riesgo | `P_RELAJACION` | 0.06 |
-| Distribución observada (INEI) | `DISTRIBUCION_INICIAL` | 20/60/20 ≈ 80% no-formal |
+| IGV del 18% | `TASA_IGV` | 0.18 |
+| UIT 2026 (referencia multas) | `UIT_VIGENTE` | 5500.0 |
+| RMV 2025 (costo laboral) | `RMV_VIGENTE` | 1130.0 |
+| Costos fijos de formalidad | `COSTO_FIJO_FORMALIDAD` | 400.0 (contabilidad + trámites + aportes) |
+| Multa por no emitir comprobante (50% UIT) | `MULTA_NO_EMISION` | 2750.0 |
+| Sanción sobre evasión parcial | `MULTA_EVASION_PCT` | 0.30 (30% de ingresos ocultos) |
+| Gradualidad por subsanación | `DESCUENTO_GRADUALIDAD` | 0.90 (rebaja 90%) |
+| Discrecionalidad SUNAT (acta vs multa) | `TASA_DISCRECIONALIDAD` | 0.30 |
+| Débil fiscalización | `AGRESIVIDAD_SUNAT` | 0.55 (% de comercios auditados/ciclo) |
+| Baja moral tributaria | `PESO_MORAL` | 0.20 |
+| Preferencia por precio bajo (pobreza) | `PESO_PRECIO` | 0.80 |
+| Evación parcial (subdeclaración) | `ALPHA_EVASION` | 0.60 (60% de ventas no reportadas) |
+| Sensibilidad del Logit (racionalidad) | `SENSIBILIDAD_MERCADO` | 3.0 (beta) |
+| Enanismo (microempresa típica) | `CAPITAL_INICIAL` | 4000.0 |
+| Sobrofererta de puestos | `N_COMERCIANTES` / `N_CONSUMIDORES` | 40 / 800 |
+| Distribución observada (INEI) | `DISTRIBUCION_INICIAL` | 25/25/50 ≈ 75% no-formal |
+| Presupuesto consumidor (Gamarra) | `PRESUPUESTO_MEDIA` / `DESV` | 200 / 40 (gauss) |
+| Moral tributaria heterogénea | `MORAL_MIN` / `MORAL_MAX` | 0.05 / 0.35 (uniform) |
 
 ### Fuentes
 
@@ -271,6 +284,31 @@ sostenido + reducción de costos formales + cultura tributaria.
 
 ---
 
+## 1quinquies. Comparación de Políticas Activables
+
+El modelo implementa tres políticas activables que pueden combinarse. Cada una se testeó
+por separado y en combo, corriendo 1000 ciclos y promediando los últimos 100:
+
+| Escenario | % Formal | % Evasor | % Informal | Informal total |
+|---|---|---|---|---|
+| Línea base | 35% | 53% | 12% | **65%** |
+| + Beneficio antigüedad | 35% | 53% | 12% | 65% |
+| + Sorteo comprobantes | 33% | 55% | 12% | 67% |
+| + Multa progresiva | 34% | 54% | 12% | 66% |
+| Combo (3 + costo ↓) | 35% | 53% | 13% | 65% |
+
+**Lectura:** con parámetros moderados, las políticas individuales tienen efectos pequeños
+— refleja la realidad del trilema: ninguna palanca aislada resuelve el problema. El
+dashboard interactivo permite explorar combinaciones con parámetros más agresivos
+(ej: `costo_fijo_formalidad=150`, `peso_moral=0.40`, `sorteo_comprobantes=True`) para
+encontrar el punto donde la formalidad se vuelve estructuralmente viable.
+
+**Uso del dashboard:** abrir `src/visualizacion.py` con Solara, seleccionar un preset
+(un click), y observar en tiempo real cómo los comerciantes cambian de color. Los 6
+presets pre-configurados cubren los escenarios más relevantes para política pública.
+
+---
+
 ## 2. Decisión de Stack Tecnológico
 
 ### Recomendación: **Python**, no Java
@@ -305,23 +343,20 @@ pasar a otro agente/Claude Code), mientras el notebook es solo la "cara visible"
 correr experimentos y armar el informe con gráficas.
 
 ```
-proyecto-gamarra/
+trilema-gamarra/
 ├── README.md
-├── requirements.txt          # mesa, pandas, matplotlib, seaborn
+├── requirements.txt          # mesa, pandas, matplotlib, solara, altair
+├── trilema_gamarra.ipynb     # notebook auto-contenido (Colab/Jupyter)
+├── informe_proyecto_gamarra.md
 ├── src/
 │   ├── agentes/
-│   │   ├── comerciante.py
-│   │   ├── consumidor.py
-│   │   └── sunat.py
-│   ├── modelo.py             # clase principal Mesa Model, step()
-│   ├── entorno.py            # Fondo Público, tasas, costos
-│   └── visualizacion.py      # dashboard interactivo (SolaraViz)
-├── experimentos/
-│   └── simulacion_base.ipynb # notebook para correr y graficar
-├── tests/
-│   └── test_agentes.py
-└── informe/
-    └── informe_final.md      # o .docx
+│   │   ├── comerciante.py    # Logit Multinomial, 3 estrategias, beneficio antigüedad
+│   │   ├── consumidor.py     # Moore, multi-compra, sorteo comprobantes
+│   │   └── sunat.py          # fiscalización, discrecionalidad, multa progresiva
+│   ├── modelo.py             # ModeloGamarra: step bifásico, DataCollector
+│   ├── entorno.py            # UIT, RMV, IGV, multas, parámetros centralizados
+│   └── visualizacion.py      # dashboard Solara (19 sliders, 6 presets, grid visual)
+└── .venv/                    # Python 3.14 + mesa 3.5.1
 ```
 
 ---
@@ -426,76 +461,88 @@ depure el trabajo, dejar esto claro en el `README.md` del repo:
 
 ---
 
-## 6. Visualización Interactiva (SolaraViz)
+## 6. Visualización Interactiva (Solara)
 
-Para hacer el proyecto más interactivo sin salir del stack Python/Mesa, se usa el módulo
-nativo de visualización de Mesa (**SolaraViz**), que corre en el navegador o embebido en
-Jupyter, con controles de play/pause/step y sliders para variar parámetros en vivo.
+El dashboard interactivo (`src/visualizacion.py`) usa **Solara** + el módulo nativo
+de visualización de Mesa 3.5. Corre en el navegador con controles de play/pause/step,
+sliders para variar parámetros en vivo, y un grid visual donde los comerciantes cambian
+de color según su estrategia.
 
-**Requisito:** el modelo debe tener un espacio (`grid`), aunque sea abstracto — los
-comerciantes se representan como "puestos" en una cuadrícula tipo mercado, y los
-consumidores se mueven entre ellos.
+**Ejecución:**
+
+```bash
+PYTHONPATH=. solara run src/visualizacion.py
+```
+
+**Componentes del dashboard:**
+
+- **Grid visual (SpaceView):** comerciantes como cuadrados que cambian de color en tiempo
+  real — verde (formal), naranja (evasor), rojo (informal) — más consumidores azules
+  móviles y SUNAT como X negro
+- **19 sliders:** agresividad SUNAT, discrecionalidad, costo fijo formalidad, tasa IGV,
+  multa no emisión, alpha evasión, multa evasión %, sensibilidad mercado (beta), peso
+  precio, peso moral, N comerciantes, N consumidores, y parámetros de las 3 políticas
+- **3 checkboxes:** activar/desactivar beneficio por antigüedad, sorteo de comprobantes,
+  multa progresiva por reincidencia
+- **6 botones de preset** (un click = escenario completo):
+  - Línea base, Más enforcement, Subsidio formalidad, Cultura tributaria,
+    Reducción tributaria, Combo reforma
+- **2 gráficas en vivo:** % de estrategias + recaudación, actualizándose cada ciclo
 
 ```python
-# src/visualizacion.py
-from mesa.visualization import SolaraViz, SpaceRenderer, make_plot_component
+# src/visualizacion.py — extracto del código real
+from mesa.visualization import Slider, SolaraViz, SpaceRenderer, make_plot_component
 from mesa.visualization.components import AgentPortrayalStyle
 
 def agent_portrayal(agent):
-    colores = {
-        "formal": "green",
-        "informal": "red",
-        "evasor": "orange",
-        "consumidor": "blue",
-    }
-    return AgentPortrayalStyle(
-        color=colores.get(agent.tipo, "gray"),
-        size=40 if agent.tipo == "consumidor" else 60,
-    )
+    if agent is None:
+        return
+    portrayal = AgentPortrayalStyle(size=50, marker="o", zorder=2)
+    if isinstance(agent, Comerciante):
+        colores = {"formal": "green", "evasor": "orange", "informal": "red"}
+        portrayal.update(("color", colores.get(agent.estrategia, "gray")),
+                         ("size", 80), ("marker", "s"), ("zorder", 3))
+    elif isinstance(agent, Sunat):
+        portrayal.update(("color", "black"), ("size", 120), ("marker", "X"))
+    elif isinstance(agent, Consumidor):
+        portrayal.update(("color", "royalblue"), ("size", 15), ("marker", "."))
+    return portrayal
 
 model_params = {
-    "n_comerciantes": {"type": "SliderInt", "value": 30, "label": "N° Comerciantes", "min": 10, "max": 100, "step": 5},
-    "agresividad_sunat": {"type": "SliderFloat", "value": 0.3, "label": "Agresividad de fiscalización", "min": 0, "max": 1, "step": 0.05},
-    "width": 15,
-    "height": 15,
+    "agresividad_sunat": Slider("Agresividad SUNAT", 0.55, 0.05, 0.95, 0.05),
+    "costo_fijo_formalidad": Slider("Costo Fijo Formalidad (S/)", 400, 100, 1500, 50),
+    "tasa_igv": Slider("Tasa IGV", 0.18, 0.05, 0.25, 0.01),
+    "beneficio_antiguedad": {"type": "Checkbox", "value": False, "label": "Beneficio antigüedad"},
+    "sorteo_comprobantes": {"type": "Checkbox", "value": False, "label": "Sorteo comprobantes"},
+    "multa_progresiva": {"type": "Checkbox", "value": False, "label": "Multa progresiva"},
+    # ... 13 sliders más
 }
 
-modelo = ModeloGamarra(n_comerciantes=30, agresividad_sunat=0.3, width=15, height=15)
+PRESETS = {
+    "Línea base": {},
+    "Más enforcement": {"agresividad_sunat": 0.90, "multa_no_emision": 5000},
+    "Subsidio formalidad": {"costo_fijo_formalidad": 150, "beneficio_antiguedad": True},
+    "Combo reforma": {"agresividad_sunat": 0.75, "costo_fijo_formalidad": 200,
+                      "beneficio_antiguedad": True, "sorteo_comprobantes": True,
+                      "multa_progresiva": True},
+}
 
-renderer = SpaceRenderer(model=modelo, backend="matplotlib").render(agent_portrayal=agent_portrayal)
-GraficaFormalidad = make_plot_component(["pct_formal", "pct_informal", "pct_evasor"], page=1)
-GraficaFondo = make_plot_component("fondo_publico", page=1)
+grafica_estrategias = make_plot_component(
+    {"pct_formal": "green", "pct_evasor": "orange", "pct_informal": "red"})
+grafica_recaudacion = make_plot_component("recaudacion")
 
-page = SolaraViz(
-    modelo,
-    renderer,
-    components=[GraficaFormalidad, GraficaFondo],
-    model_params=model_params,
-    name="El Trilema de la Gamarra",
-)
+model = solara.reactive(ModeloGamarra())
+renderer = SpaceRenderer(model.value, backend="matplotlib").setup_agents(agent_portrayal)
+
+@solara.component
+def Page():
+    with solara.Sidebar():
+        with solara.Card("Presets"):
+            for name in PRESETS:
+                solara.Button(name, on_click=lambda n=name: model.set(ModeloGamarra(**PRESETS[n])))
+    SolaraViz(model, renderer, components=[grafica_estrategias, grafica_recaudacion],
+              model_params=model_params, name="El Trilema de Gamarra")
 ```
-
-Se ejecuta con:
-
-```bash
-solara run src/visualizacion.py
-```
-
-Esto abre una pestaña del navegador con: el mapa de agentes coloreados según su estado
-(verde=formal, rojo=informal, naranja=evasor, azul=consumidor), gráficas del
-`DataCollector` actualizándose en cada `step()`, y sliders para experimentar en vivo con
-la agresividad de fiscalización u otros parámetros — ideal tanto para depurar el modelo
-como para la demo en la sustentación final.
-
-**Alternativas consideradas:**
-- *Streamlit:* más simple si no se necesita representar posición espacial de los agentes,
-  solo gráficas y sliders. Buena opción de respaldo si el tiempo apremia.
-- *Visor custom en HTML/Canvas:* útil como complemento vistoso para la presentación final
-  (reproductor tipo "replay" de los 1000 ciclos), exportando el `DataCollector` a JSON.
-  No reemplaza el dashboard de desarrollo, solo lo complementa para el día de la
-  sustentación.
-
-**Responsable:** P4 + P5, dentro de la Fase 4 (ver cronograma).
 
 ---
 
