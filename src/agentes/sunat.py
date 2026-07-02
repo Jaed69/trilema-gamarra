@@ -7,6 +7,7 @@ Prioriza evasores; la agresividad abre el blanco a informales.
 import mesa
 from src.entorno import (
     PRESUPUESTO_FISCALIZACION,
+    FONDO_MAX,
     APROPIACION_SUNAT,
     MULTA_EVASOR,
     MULTA_INFORMAL,
@@ -62,6 +63,8 @@ class Sunat(mesa.Agent):
         # Fondo se alimenta de: apropiación estatal + IGV recaudado + multas - costo fiscalización
         self.presupuesto_fiscalizacion += APROPIACION_SUNAT
         self.presupuesto_fiscalizacion += self.model._recaudacion_ciclo * SHARE_IGV_A_SUNAT
+        # ponytail: cap al Fondo — el exceso se redistribuye a otras partidas del Estado
+        self.presupuesto_fiscalizacion = min(self.presupuesto_fiscalizacion, FONDO_MAX)
         comerciantes = list(self.model.agents.select(agent_type=Comerciante))
         objetivos = self.seleccionar_objetivos(comerciantes)
         self.presupuesto_fiscalizacion -= len(objetivos) * COSTO_FISCALIZACION

@@ -25,6 +25,106 @@ Estos datos deben citarse en el marco teórico del informe final con sus fuentes
 
 ---
 
+## 1bis. Marco Teórico: Causas de la Informalidad en el Perú
+
+### Contexto tributario real (2025-2026)
+
+**Unidad Impositiva Tributaria (UIT):**
+- 2025: **S/ 5,350** (D.S. N° 380-2024-EF). Es la unidad de referencia para multas,
+  umbrales y deducciones.
+
+**IGV (Impuesto General a las Ventas):**
+- **18%** sobre el valor de venta (16% IGV + 2% Impuesto a la Promoción Municipal).
+- Lo cobra el comerciante formal al consumidor y lo declara/paga a SUNAT.
+
+**Régimenes tributarios para pequeños negocios:**
+
+| Régimen | Tope de ingresos | Tasa / Cuota | ¿Emite factura? |
+|---|---|---|---|
+| **Nuevo RUS (NRUS)** | 8 UIT/año (S/ 42,800) | Cuota fija S/ 20–50/mes según categoría | No, solo boleta |
+| **RER** | 525 UIT/año | 1.5% sobre ingresos netos | Sí |
+| **MYPE Tributario (RMT)** | 1,700 UIT/año | 1% hasta 25 UIT, 1.5% después | Sí |
+| **Régimen General** | Sin tope | 29.5% (Impuesto a la Renta) | Sí |
+
+**Costo laboral formal** (sobrecarga sobre el sueldo base, a cargo del empleador):
+- Essalud: **9%**
+- CTS (Compensación por Tiempo de Servicios): **8.33%** (≈ 1 sueldo/año)
+- Gratificaciones (julio + diciembre): **14.3%** (2 sueldos / 14 meses)
+- Vacaciones: **8.33%** (1 sueldo/año)
+- **Total sobrecarga empleador: ~30–35%** sobre el sueldo base.
+
+Para una microempresa con 1 trabajador (RMV S/ 1,025/mes), el costo laboral mensual
+es ~S/ 1,300–1,400. La formalidad laboral es uno de los costos más altos de operar
+dentro de la ley.
+
+**Multas SUNAT (Tabla de Infracciones del Código Tributario):**
+- No emitir comprobante de pago: **50% UIT** (S/ 2,675 en 2025) o **1 UIT** según régimen.
+- No llevar libros contables: 50% UIT.
+- No declarar: 50% UIT + intereses.
+- **Facultad discrecional:** la SUNAT puede no sancionar a microempresas (ventas hasta
+  150 UIT) en primera infracción, ofreciendo capacitación preventiva en su lugar
+  (Resolución de Superintendencia N° 078-2024/SUNAT y modificatorias).
+
+### Causas estructurales de la informalidad
+
+La literatura económica (BID, CEPAL, INEI, MEF) identifica al menos seis causas que el
+modelo debe reflejar:
+
+1. **Altos costos de formalidad.** Un microcomerciante enfrenta IGV (18%), aportes
+   laborales (~30–35% sobre el sueldo), cuota NRUS/RER, contabilidad (S/ 200–400/mes)
+   y trámites. Cuando el margen es estrecho, la formalidad no es rentable.
+
+2. **Enanismo empresarial.** El 98% de las empresas peruanas son micro o pequeñas.
+   La informalidad correlaciona con tamaño: **88.8%** en empresas de 1–10 trabajadores
+   vs. **15.8%** en empresas de 51+. Las microempresas no tienen escala para absorber
+   los costos fijos de la formalidad.
+
+3. **Baja fiscalización.** SUNAT no puede llegar a los millones de microcomerciantes.
+   El riesgo percibido de ser detectado y multado es bajo, especialmente fuera de Lima.
+   Lima Metropolitana tiene ~44–48% de informalidad vs. ~70% nacional.
+
+4. **Baja moral tributaria.** Los consumidores peruanos prefieren precios bajos y rara
+   vez exigen comprobantes. El "sorteo de comprobantes" de SUNAT existe precisamente
+   para incentivar la cultura tributaria. La percepción de que el Estado no devuelve
+   servicios refuerza la evasión.
+
+5. **Pobreza y demanda de precios bajos.** Con un ingreso per cápita bajo, los
+   consumidores priorizan precio sobre legalidad. El bien informal (sin IGV) es ~15%
+   más barato, lo que sostiene la demanda del sector informal.
+
+6. **Burocracia y falta de incentivos.** Formalizarse requiere RUC, libros contables,
+   declaraciones mensuales. Los beneficios tangibles (crédito formal, exportación,
+   contratación con el Estado) rara vez aplican a un comerciante de Gamarra.
+
+### Mapeo de causas → parámetros del modelo
+
+| Causa real | Parámetro en `entorno.py` | Valor calibrado |
+|---|---|---|
+| IGV del 18% | `IGV` | 0.18 |
+| Costos fijos de formalidad | `COSTO_FORMALIDAD` | ~15–25% de ingresos por ciclo |
+| Multa por no emitir comprobante | `MULTA_EVASOR` / `MULTA_INFORMAL` | 50% UIT → monto significativo |
+| Débil fiscalización | `N_FISCALIZACIONES_POR_CICLO`, `AGRESIVIDAD_SUNAT` | bajos |
+| Presupuesto SUNAT limitado | `APROPIACION_SUNAT` | bajo y constante |
+| Baja moral tributaria | `W_MORAL` (peso en consumidor) | 0.05–0.15 |
+| Preferencia por precio bajo | `W_PRECIO` | 0.70–0.80 |
+| Enanismo (microempresa típica) | `DINERO_INICIAL_COMERCIANTE` | bajo, sin colchón |
+| Distribución observada (INEI) | `DISTRIBUCION_INICIAL` | 20/60/20 ≈ 80% no-formal |
+
+### Fuentes
+
+- INEI — Encuesta Permanente de Empleo Nacional (EPEN), 2025. Informes trimestrales.
+- INEI — Encuesta Nacional de Hogares (ENAHO), módulo de empleo e informalidad.
+- SUNAT — Tabla de Infracciones y Sanciones (Código Tributario, arts. 173–178).
+- SUNAT — Boletín Especializado SUNAT (BES), estadísticas mensuales de recaudación.
+- MEF — Decreto Supremo que fija la UIT anual (D.S. N° 380-2024-EF para 2025).
+- BID/CEPAL — Estudios sobre informalidad laboral en América Latina.
+
+> **Nota de calibración:** los valores exactos del modelo se ajustan en la Fase 3
+> (experimentos) mediante sweep de parámetros, comparando el equilibrio de la
+> simulación contra el dato observado del INEI (~70% informalidad nacional).
+
+---
+
 ## 2. Decisión de Stack Tecnológico
 
 ### Recomendación: **Python**, no Java

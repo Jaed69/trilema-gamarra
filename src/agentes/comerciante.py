@@ -12,6 +12,7 @@ from src.entorno import (
     DINERO_INICIAL_COMERCIANTE,
     COSTO_FORMALIDAD,
     P_CAMBIO_ESTRATEGIA,
+    P_RELAJACION,
     UMBRAL_QUIEBRA,
 )
 
@@ -39,6 +40,8 @@ class Comerciante(mesa.Agent):
                 self.tipo = "informal"  # no le alcanza para formalizar
         elif self.tipo == "formal" and self.dinero < DINERO_INICIAL_COMERCIANTE * UMBRAL_QUIEBRA:
             self.tipo = "informal"  # no banca el costo de formalidad
+        elif self.tipo == "formal" and self.random.random() < P_RELAJACION:
+            self.tipo = "informal"  # se relaja: percibe bajo riesgo de fiscalización
         elif self.tipo == "informal" and self.dinero > DINERO_INICIAL_COMERCIANTE * 1.5:
             if self.random.random() < P_CAMBIO_ESTRATEGIA:
                 self.tipo = "evasor"  # probando margen extra cuando va bien
