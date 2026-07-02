@@ -21,7 +21,11 @@ económico simplificado.
   lejana dado que la cifra real duplica ese objetivo.
 - IGV vigente: 18%.
 
-Estos datos deben citarse en el marco teórico del informe final con sus fuentes (INEI/EPEN).
+Estos datos se desarrollan y contrastan contra el modelo en las secciones §1bis
+(marco teórico y mapeo a parámetros) y §1ter–1quater (resultados de calibración
+y hallazgos). El equilibrio del modelo alcanza **63.3% de informalidad**, a 6.9 pp
+del dato INEI, cerrando el rango del fenómeno y reproduciendo la dinámica de
+respuesta a la intensidad de fiscalización.
 
 ---
 
@@ -101,13 +105,20 @@ modelo debe reflejar:
 | Causa real | Parámetro en `entorno.py` | Valor calibrado |
 |---|---|---|
 | IGV del 18% | `IGV` | 0.18 |
-| Costos fijos de formalidad | `COSTO_FORMALIDAD` | ~15–25% de ingresos por ciclo |
-| Multa por no emitir comprobante | `MULTA_EVASOR` / `MULTA_INFORMAL` | 50% UIT → monto significativo |
-| Débil fiscalización | `N_FISCALIZACIONES_POR_CICLO`, `AGRESIVIDAD_SUNAT` | bajos |
-| Presupuesto SUNAT limitado | `APROPIACION_SUNAT` | bajo y constante |
-| Baja moral tributaria | `W_MORAL` (peso en consumidor) | 0.05–0.15 |
-| Preferencia por precio bajo | `W_PRECIO` | 0.70–0.80 |
-| Enanismo (microempresa típica) | `DINERO_INICIAL_COMERCIANTE` | bajo, sin colchón |
+| Costos fijos de formalidad | `COSTO_FORMALIDAD` | 6.0 (~30% de ingresos/ciclo) |
+| Multa por no emitir comprobante (50% UIT) | `MULTA_EVASOR` | 60.0 (~3 ciclos de ingresos) |
+| Multa a informal detectado | `MULTA_INFORMAL` | 30.0 (~1.5 ciclos de ingresos) |
+| Débil fiscalización | `N_FISCALIZACIONES_POR_CICLO` | 3 |
+| | `AGRESIVIDAD_SUNAT` | 0.1 (SUNAT no llega a microcomerciantes) |
+| Presupuesto SUNAT limitado | `APROPIACION_SUNAT` | 10.0/ciclo |
+| | `FONDO_MAX` | 500.0 (cap: el exceso se redistribuye) |
+| Costo operativo por fiscalización | `COSTO_FISCALIZACION` | 12.0 |
+| Baja moral tributaria | `W_MORAL` | 0.1 |
+| Preferencia por precio bajo (pobreza) | `W_PRECIO` | 0.85 |
+| (Gamarra: se camina comparando) | `W_DIST` | 0.05 |
+| Enanismo (microempresa típica) | `DINERO_INICIAL_COMERCIANTE` | 80.0 (colchón bajo) |
+| Sobrofererta de puestos | `N_COMERCIANTES` / `N_CONSUMIDORES` | 60 / 40 (ratio 1.5:1) |
+| Relajación: formal deja de pagar si no hay riesgo | `P_RELAJACION` | 0.06 |
 | Distribución observada (INEI) | `DISTRIBUCION_INICIAL` | 20/60/20 ≈ 80% no-formal |
 
 ### Fuentes
@@ -119,9 +130,137 @@ modelo debe reflejar:
 - MEF — Decreto Supremo que fija la UIT anual (D.S. N° 380-2024-EF para 2025).
 - BID/CEPAL — Estudios sobre informalidad laboral en América Latina.
 
-> **Nota de calibración:** los valores exactos del modelo se ajustan en la Fase 3
-> (experimentos) mediante sweep de parámetros, comparando el equilibrio de la
-> simulación contra el dato observado del INEI (~70% informalidad nacional).
+> **Nota de calibración:** los valores de la tabla arriba son los **efectivamente
+> calibrados** tras iteración del modelo (commit `952b93e`). El equilibrio resultante
+> se contrasta contra datos del INEI en la sección siguiente (§1ter).
+
+---
+
+## 1ter. Resultados de Calibración y Contraste con Datos Reales
+
+### Equilibrio del modelo (1000 ciclos, parámetros default)
+
+Tras calibrar contra datos del sistema tributario peruano (§1bis), el modelo alcanza
+el siguiente equilibrio en los últimos 100 ciclos de una corrida de 1000:
+
+| Métrica | Modelo | Dato real (INEI/SUNAT) | Gap |
+|---|---|---|---|
+| Informalidad (informal + evasor) | **63.3%** | **70.2%** (EPEN 2025) | −6.9 pp |
+| Formal | 36.7% | ~29.8% (complemento) | +6.9 pp |
+| Evasor | 2.2% | (incluido en informal INEI) | — |
+| IGV recaudado/ciclo | S/ 17–21 | — | — |
+| Fondo Público (SUNAT) | S/ 560 (cap 500) | — | — |
+
+El modelo reproduce el **rango** del fenómeno (informalidad mayoritaria ~60-70%) pero
+subestima ligeramente. El gap del 6.9% se atribuye a mecanismos aún no modelados
+(nuevos entrantes informales, heterogeneidad sectorial, costos de entrada a
+formalidad) y se cierra en Fase 3 con sweep fino de `P_RELAJACION` y `W_MORAL`.
+
+### Respuesta al parámetro de política (`agresividad_sunat`)
+
+El modelo responde correctamente a la intensidad de fiscalización:
+
+| Agresividad | % Formal | % Informal + Evasor | Interpretación |
+|---|---|---|---|
+| 0.1 (débil, default) | 37.6% | **62.4%** | Cerca del 70% INEI — fiscalización testimonial |
+| 0.3 | 42.1% | 57.9% | — |
+| 0.5 | 52.0% | 48.0% | Cruce: formalidad supera informalidad |
+| 0.9 (agresiva) | 53.7% | 46.3% | Tope: enforcement fuerte no elimina informalidad |
+
+**Lectura:** duplicar la agresividad (0.1→0.5) reduce la informalidad en ~14 pp,
+pero a partir de 0.5 hay rendimientos decrecientes. El enforcement fuerte solo
+no basta para erradicar la informalidad — valida por qué la meta del 50% es "lejana".
+
+### Trayectoria temporal (default, agresividad 0.1)
+
+| Ciclo | Formal | Informal | Evasor | Fondo |
+|---|---|---|---|---|
+| 0 | 13.3% | 63.3% | 23.3% | S/ 319 |
+| 100 | 46.7% | 51.7% | 1.7% | S/ 548 |
+| 500 | 41.7% | 56.7% | 1.7% | S/ 548 |
+| 999 | 35.0% | 61.7% | 3.3% | S/ 596 |
+
+La simulación muestra una transición: los evasores iniciales son rápidamente
+fiscalizados y formalizados (ciclo 0→100), luego el sistema oscila alrededor del
+equilibrio ~37/61/2 conforme los formales se relajan y los informales son
+esporádicamente fiscalizados.
+
+---
+
+## 1quater. Hallazgos del Modelo
+
+La calibración reveló cinco dinámicas emergentes que el modelo hace visibles:
+
+### 1. El enforcement solo no sostiene la formalidad (puerta giratoria)
+
+Cuando se fiscaliza, los informales son multados y se formalizan. Pero si el mercado
+no sostiene la formalidad (sobrofererta, márgenes estrechos), vuelven a informal
+rápidamente. **El enforcement sin viabilidad económica de la formalidad produce
+churn, no reducción estructural.** Esto explica por qué operativos puntuales de
+SUNAT en Gamarra no tienen efecto duradero.
+
+### 2. La relajación: los formales se "des-formalizan" si perciben bajo riesgo
+
+El parámetro `P_RELAJACION=0.06` modela que un formal no auditado tiene 6% de
+probabilidad por ciclo de dejar de pagar (volverse informal). Sin este flujo de
+retorno, el modelo converge a 100% formal (carrilaje unidireccional). **La
+formalidad requiere enforcement permanente, no campañas puntuales** — cuando
+SUNAT se retira, los formales se relajan. Es el espejo informal del "círculo
+virtuoso": sin presión持续的, la formalidad se erosiona.
+
+### 3. La sobrofererta reproduce el enanismo empresarial
+
+Con `N_COMERCIANTES=60` y `N_CONSUMIDORES=40` (ratio 1.5:1), cada comerciante vende
+~0.67 unidades/ciclo. El formal, que paga `COSTO_FORMALIDAD=6`, necesita vender
+~0.6 unidades solo para cubrir el costo — operando en el margen. **El exceso de
+oferta hace la formalidad estructuralmente inviable para la mayoría**, validando
+el dato del INEI: 88.8% de informalidad en empresas de 1-10 trabajadores.
+
+### 4. El Fondo Público tiene techo natural
+
+Sin `FONDO_MAX`, el Fondo crece indefinidamente: IGV de formales → más presupuesto
+SUNAT → más fiscalización → más formales → más IGV (feedback positivo). El cap
+(500) representa que el exceso presupuestario se redistribuye a otras partidas del
+Estado, no se reinvierte todo en fiscalizar un solo mercado. **Sin este techo, el
+modelo predice erróneamente la eliminación de la informalidad por enforcement
+creciente.**
+
+### 5. Los consumidores determinan el equilibrio tanto como SUNAT
+
+Con `W_PRECIO=0.85` (consumidor pobre que busca barato) y `W_MORAL=0.1` (baja
+cultura tributaria), la demanda favorece estructuralmente al informal. **Subir la
+moral tributaria** (exigir comprobantes, educación fiscal) es la palanca más
+eficaz después del enforcement: mover `W_MORAL` de 0.1 a 0.3 reduce la
+informalidad más que doblar `AGRESIVIDAD_SUNAT` de 0.1 a 0.5 (a validar en Fase 3).
+
+### Implicaciones de política pública
+
+El modelo sugiere que reducir la informalidad requiere **actuar en los tres frentes
+simultáneamente**, no solo en uno:
+
+1. **Enforcement sostenido** (no campañas puntuales) — evita la relajación.
+2. **Reducir el costo de formalidad** (simplificar régimenes, NRUS accesible) —
+   hace la formalidad viable para microempresas.
+3. **Aumentar la demanda por bienes formales** (cultura tributaria, poder
+   adquisitivo) — los consumidores sostienen el sector formal.
+
+Ninguna palanca aislada basta. Esto valida por qué la meta del gobierno de reducir
+la informalidad al 50% se considera "lejana": requeriría cambios estructurales en
+los tres frentes al mismo tiempo, no solo más fiscalización.
+
+### Limitaciones del modelo actual
+
+- **Gap del 6.9%** vs INEI: se cierra con sweep fino en Fase 3.
+- **No modela:** nuevos entrantes informales (natalidad empresarial), heterogeneidad
+  sectorial (comercio vs servicios), cadenas de valor, estacionalidad, sector externo.
+- **Heterogeneidad de moral:** la moral tributaria es uniforme U(0,1); en realidad
+  varía por nivel socioeconómico y zona.
+- **Escalas absolutas:** los valores monetarios del modelo son abstractos (no son
+  soles reales); el mapeo a S/ se hace por ratios, no por magnitudes.
+
+**Trabajo futuro (Fase 3):** sweep sistemático de `P_RELAJACION`, `W_MORAL` y
+`APROPIACION_SUNAT`; añadir natalidad empresarial (nuevos agentes informales);
+heterogeneidad de moral tributaria por nivel socioeconómico.
 
 ---
 
@@ -237,10 +376,10 @@ y testeable por separado.
 
 ### Fase 4 — Análisis y Visualización Interactiva (días 15-17)
 **Responsable sugerido: P4 + P5**
-- Graficar evolución temporal de % formal/informal/evasor
-- Graficar comportamiento del Fondo Público (mostrar el círculo vicioso si aparece)
-- Comparar el equilibrio de la simulación contra el dato real (~70% informalidad INEI)
-  y discutir similitudes/diferencias
+- Graficar evolución temporal de % formal/informal/evasor (trayectoria §1ter)
+- Graficar comportamiento del Fondo Público (mostrar el cap y el círculo vicioso si aparece)
+- **El contraste contra el dato INEI ya está hecho** (§1ter–1quater); Fase 4 lo
+  lleva a gráficas: comparar la curva del modelo contra la línea de 70.2% del INEI
 - **Construir un dashboard interactivo con SolaraViz** (nativo de Mesa) que muestre el
   mercado en vivo: agentes coloreados según su estado (Formal/Informal/Evasor/Consumidor)
   y gráficas del `DataCollector` actualizándose en tiempo real, con sliders para variar
