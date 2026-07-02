@@ -16,6 +16,11 @@ from src.entorno import (
     CAPITAL_INICIAL,
     DISTRIBUCION_INICIAL,
     SEED,
+    COSTO_FIJO_FORMALIDAD,
+    TASA_IGV,
+    MULTA_NO_EMISION,
+    ALPHA_EVASION,
+    MULTA_EVASION_PCT,
 )
 from src.agentes.comerciante import Comerciante
 from src.agentes.consumidor import Consumidor
@@ -32,6 +37,18 @@ class ModeloGamarra(mesa.Model):
         peso_precio: float = PESO_PRECIO,
         peso_moral: float = PESO_MORAL,
         sensibilidad_mercado: float = SENSIBILIDAD_MERCADO,
+        costo_fijo_formalidad: float = COSTO_FIJO_FORMALIDAD,
+        tasa_igv: float = TASA_IGV,
+        multa_no_emision: float = MULTA_NO_EMISION,
+        alpha_evasion: float = ALPHA_EVASION,
+        multa_evasion_pct: float = MULTA_EVASION_PCT,
+        beneficio_antiguedad: bool = False,
+        tasa_descuento_antiguedad: float = 0.05,
+        sorteo_comprobantes: bool = False,
+        prob_sorteo: float = 0.01,
+        premio_sorteo: float = 50.0,
+        multa_progresiva: bool = False,
+        factor_reincidencia: float = 2.0,
         width: int = WIDTH,
         height: int = HEIGHT,
         seed: int = SEED,
@@ -43,6 +60,18 @@ class ModeloGamarra(mesa.Model):
         self.sensibilidad_mercado = sensibilidad_mercado
         self.peso_precio = peso_precio
         self.peso_moral = peso_moral
+        self.costo_fijo_formalidad = costo_fijo_formalidad
+        self.tasa_igv = tasa_igv
+        self.multa_no_emision = multa_no_emision
+        self.alpha_evasion = alpha_evasion
+        self.multa_evasion_pct = multa_evasion_pct
+        self.beneficio_antiguedad = beneficio_antiguedad
+        self.tasa_descuento_antiguedad = tasa_descuento_antiguedad
+        self.sorteo_comprobantes = sorteo_comprobantes
+        self.prob_sorteo = prob_sorteo
+        self.premio_sorteo = premio_sorteo
+        self.multa_progresiva = multa_progresiva
+        self.factor_reincidencia = factor_reincidencia
         self.recaudacion_ciclo = 0.0
 
         # Comerciantes con distribución sesgada a no-formalidad
