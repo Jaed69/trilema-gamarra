@@ -548,13 +548,22 @@ def Page():
 
 ## 7. Cronograma Resumen
 
-| Fase | Días | Entregable clave |
+| Fase | Estado | Entregable |
 |---|---|---|
-| 0. Setup | 1-2 | Repo + diseño |
-| 1. Agentes base | 3-7 | 3 clases funcionando por separado |
-| 2. Integración | 8-11 | Simulación end-to-end |
-| 3. Experimentos | 12-14 | Datasets de 3+ escenarios |
-| 4. Análisis + Dashboard | 15-17 | Notebook con gráficas + dashboard interactivo |
-| 5. Informe final | 18-20 | Informe + presentación |
+| 0. Setup | ✓ Completado | Repo + diseño + parámetros reales |
+| 1. Agentes base | ✓ Completado | 3 clases con Logit Multinomial, Moore, fiscalización |
+| 2. Integración | ✓ Completado | ModeloGamarra con step bifásico + DataCollector |
+| 3. Experimentos | ✓ Completado | Sweep de agresividad + comparación de políticas |
+| 4. Dashboard + Notebook | ✓ Completado | Solara (19 sliders, 6 presets) + notebook Colab |
+| 5. Informe final | ✓ Completado | Este documento + hallazgos + recomendaciones |
 
-Total estimado: ~3 semanas con trabajo paralelo real en la Fase 1.
+**Commits clave:**
+
+| Commit | Descripción |
+|---|---|
+| `0b5885c` | Fase 1: lógica real en los 3 agentes + step bifásico |
+| `952b93e` | Marco teórico + recalibración con datos INEI |
+| `d2242df` | Migración a valores reales (UIT, RMV) + Logit Multinomial |
+| `4cda5d7` | Dashboard interactivo + 3 políticas activables |
+| `902fc95` | Notebook auto-contenido para Google Colab |
+| `20d686b` | Informe actualizado con políticas y dashboard |

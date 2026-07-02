@@ -1,138 +1,185 @@
 # El Trilema de la Gamarra
 
 Simulación Multiagente (MAS) de informalidad y evasión tributaria en el Perú, con
-[framework Mesa](https://github.com/projectmesa/mesa). Tres tipos de agentes
+[framework Mesa 3.5](https://github.com/projectmesa/mesa). Tres tipos de agentes
 (`Comerciante`, `Consumidor`, `Sunat`) interactúan en ciclos discretos sobre un
-grid tipo mercado.
+grid tipo mercado, con valores reales en soles (UIT, RMV, IGV, multas del Código
+Tributario) y decisión por Logit Multinomial.
+
+## Resultados
+
+| Métrica | Modelo | INEI (EPEN 2025) | Gap |
+|---|---|---|---|
+| Informalidad total | **65.5%** | 70.2% | −4.7 pp |
+| Formal | 34.5% | ~29.8% | — |
+| Evasor | 53.4% | — | — |
+| Informal puro | 12.1% | — | — |
 
 ## Stack
 
-- Python 3.11+
-- Mesa 3.5 (ABM: `Agent`, `Model`, `MultiGrid`, `DataCollector`)
+- Python 3.14
+- Mesa 3.5.1 (`Agent`, `Model`, `MultiGrid`, `DataCollector`)
 - pandas / matplotlib (análisis y gráficas)
+- Solara 1.57 + altair (dashboard interactivo, opcional)
 
 ## Cómo correr
+
+### Opción 1: Notebook (Google Colab o Jupyter)
+
+```bash
+# En Colab: abrir trilema_gamarra.ipynb y ejecutar todo
+# La primera celda instala dependencias automáticamente
+```
+
+### Opción 2: Scripts .py
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m src.modelo          # corre 100 ciclos + self-check
+
+python -m src.modelo                    # 1000 ciclos + self-check
+PYTHONPATH=. solara run src/visualizacion.py   # dashboard interactivo
 ```
 
 ## Estructura
 
 ```
-src/
-├── agentes/
-│   ├── comerciante.py   # P1 — 3 estrategias, calcular_precio, decidir_estrategia
-│   ├── consumidor.py    # P2 — presupuesto, moral tributaria, elegir_tienda, comprar
-│   └── sunat.py         # P3 — fiscalización, aplicar_multa, Fondo Público
-├── entorno.py           # parámetros centralizados (IGV, costos, presets) — dueño: P3
-└── modelo.py            # P4 — ModeloGamarra: step(), DataCollector, entry point
+trilema-gamarra/
+├── trilema_gamarra.ipynb   # notebook auto-contenido (Colab/Jupyter)
+├── informe_proyecto_gamarra.md
+├── requirements.txt
+├── src/
+│   ├── agentes/
+│   │   ├── comerciante.py   # Logit Multinomial, 3 estrategias, beneficio antigüedad
+│   │   ├── consumidor.py    # Moore, multi-compra, sorteo comprobantes
+│   │   └── sunat.py         # fiscalización, discrecionalidad, multa progresiva
+│   ├── modelo.py            # ModeloGamarra: step bifásico, DataCollector
+│   ├── entorno.py           # UIT, RMV, IGV, multas — parámetros centralizados
+│   └── visualizacion.py     # dashboard Solara: 19 sliders, 6 presets, grid visual
+└── .venv/
 ```
 
-## Parámetros
+## Parámetros principales
 
-Todos en `src/entorno.py`. No hardcodear dentro de los agentes.
+Todos en `src/entorno.py`. Los agentes leen de `self.model.<param>`.
 
-| Parámetro | Valor | Fuente |
+| Parámetro | Valor | Descripción |
 |---|---|---|
-| IGV | 0.18 | vigente Perú |
-| Distribución inicial | 20% formal / 60% informal / 20% evasor | calibrado a ~70% informal (INEI 2025) |
-| Costo formalidad/ciclo | 20.0 | supuesto del modelo |
-| Presupuesto fiscalización | 1000.0 | supuesto |
-| Multa evasor | 200.0 | supuesto |
+| `UIT_VIGENTE` | S/ 5,500 | UIT 2026 (D.S. N° 301-2025-EF) |
+| `RMV_VIGENTE` | S/ 1,130 | RMV 2025 (D.S. N° 006-2024-TR) |
+| `TASA_IGV` | 0.18 | 18% (16% IGV + 2% IPM) |
+| `COSTO_FIJO_FORMALIDAD` | S/ 400 | contabilidad + trámites + aportes |
+| `MULTA_NO_EMISION` | S/ 2,750 | 50% UIT (Código Tributario Art. 174) |
+| `ALPHA_EVASION` | 0.60 | fracción de ventas no reportadas |
+| `N_COMERCIANTES` | 40 | puestos en el grid |
+| `N_CONSUMIDORES` | 800 | compradores por ciclo |
+| `AGRESIVIDAD_SUNAT` | 0.55 | % de comercios auditados/ciclo |
+| `TASA_DISCRECIONALIDAD` | 0.30 | prob. de acta preventiva vs multa |
+| `SENSIBILIDAD_MERCADO` | 3.0 | beta del Logit Multinomial |
 
----
+## Políticas activables
 
-## Contrato de Interfaces (firmas firmes)
+Tres políticas se activan vía parámetros del modelo o checkboxes en el dashboard:
 
-Cada persona implementa su agente respetando estas firmas. El `step()` del modelo
-llama `agents.shuffle_do("step")`, así que toda la lógica por ciclo vive en el
-`step()` de cada agente.
+| Política | Parámetro | Mecanismo |
+|---|---|---|
+| Beneficio por antigüedad | `beneficio_antiguedad=True` | Descuento incremental en costo fijo por ciclo formal consecutivo (tope 50%) |
+| Sorteo de comprobantes | `sorteo_comprobantes=True` | Consumidor que compra formal tiene chance de premio (aumenta utilidad de formal) |
+| Multa progresiva | `multa_progresiva=True` | 1ra=acta, 2da=multa base, 3ra+=multa × factor_reincidencia |
 
-### `Comerciante` — P1 (`src/agentes/comerciante.py`)
+## Dashboard interactivo
+
+```bash
+PYTHONPATH=. solara run src/visualizacion.py
+```
+
+- **Grid visual**: comerciantes cambian de color (verde/naranja/rojo) en tiempo real
+- **19 sliders**: fiscalización, costos, IGV, multas, mercado, consumidores
+- **3 checkboxes**: activar políticas nuevas
+- **6 presets**: Línea base, Más enforcement, Subsidio formalidad, Cultura tributaria, Reducción tributaria, Combo reforma
+- **2 gráficas en vivo**: % estrategias + recaudación
+
+## Interfaces
+
+### `Comerciante` (`src/agentes/comerciante.py`)
 
 ```python
 class Comerciante(mesa.Agent):
-    def __init__(self, model, tipo: str = "informal"): ...
-        # atributos: self.tipo, self.precio, self.dinero
+    def __init__(self, model, estrategia="informal", capital=4000.0): ...
+        # atributos: estrategia, capital, ventas_ciclo, ingresos_declarados,
+        #            ingresos_ocultos, multas_pagadas, ciclos_formal_consecutivos, infracciones
 
-    def calcular_precio(self, igv: float = IGV) -> float: ...
-        # devuelve precio final según tipo. Formal: suma IGV. Informal: no. Evasor: medio IGV.
+    def calcular_precio(self) -> float: ...
+        # formal: PRECIO_BASE * (1 + IGV)
+        # evasor: parte formal + parte informal (alpha)
+        # informal: PRECIO_BASE (sin IGV)
 
-    def decidir_estrategia(self, rentabilidad: dict) -> None: ...
-        # rentabilidad = {"formal": float, "informal": float, "evasor": float}
-        # si la actual da negativo, cambia al tipo de mayor rentabilidad.
+    def estimar_utilidad_futura(self, est: str) -> float: ...
+        # utilidad neta esperada por estrategia (formal/evasor/informal)
+
+    def ajustar_cumplimiento(self) -> None: ...
+        # transición probabilística vía Logit Multinomial
 
     def step(self): ...
-        # orquesta calcular_precio + descuenta costo de formalidad + (decidir_estrategia si toca)
+        # ajusta cumplimiento → resetea ventas → descuenta costo fijo
 ```
 
-### `Consumidor` — P2 (`src/agentes/consumidor.py`)
+### `Consumidor` (`src/agentes/consumidor.py`)
 
 ```python
 class Consumidor(mesa.Agent):
     def __init__(self, model): ...
-        # atributos: self.presupuesto, self.moral_tributaria (0..1)
+        # atributos: moral_tributaria, presupuesto
 
-    def elegir_tienda(self, comerciantes: list) -> Comerciante | None: ...
-        # filtra por presupuesto asequible + pondera por precio, moral tributaria, distancia.
-        # devuelve None si ninguna tienda es viable.
+    def realizar_compra(self) -> None: ...
+        # loop: busca comerciantes en Moore, elige por utilidad, compra, mueve
 
-    def comprar(self, tienda: Comerciante | None) -> None: ...
-        # resta precio del presupuesto, suma al dinero del comerciante.
-        # no-op si tienda is None.
+    def ejecutar_transaccion(self, comerciante) -> None: ...
+        # enruta IGV según estrategia del vendedor (F declara, E parcial, I oculto)
 
     def step(self): ...
-        # obtiene comerciantes del modelo, elige tienda, compra.
+        # resetea presupuesto → realiza compra
 ```
 
-### `Sunat` — P3 (`src/agentes/sunat.py`)
+### `Sunat` (`src/agentes/sunat.py`)
 
 ```python
 class Sunat(mesa.Agent):
     def __init__(self, model): ...
-        # atributos: self.presupuesto_fiscalizacion (Fondo Público)
+        # atributos: tasa_cobertura, multas_emitidas, actas_preventivas
 
-    def seleccionar_objetivos(self, comerciantes: list, n: int = 3) -> list: ...
-        # prioriza evasores según self.model.agresividad_sunat (0..1).
-        # devuelve lista de objetivos a fiscalizar este ciclo.
-
-    def aplicar_multa(self, objetivo: Comerciante) -> float: ...
-        # si objetivo es evasor: suma MULTA al Fondo, descuenta del comerciante.
-        # devuelve monto recaudado (0 si no aplica).
+    def fiscalizar_mercado(self) -> None: ...
+        # audita muestra de comerciantes → multa o acta preventiva
+        # informal detectado → forzado a evasor
 
     def step(self): ...
-        # selecciona objetivos entre los comerciantes, aplica multa a cada uno.
+        # fiscaliza mercado
 ```
 
-### `ModeloGamarra` — P4 (`src/modelo.py`)
+### `ModeloGamarra` (`src/modelo.py`)
 
 ```python
 class ModeloGamarra(mesa.Model):
-    def __init__(self, n_comerciantes=30, n_consumidores=50, agresividad_sunat=0.3, width=15, height=15): ...
+    def __init__(self, n_comerciantes=40, n_consumidores=800,
+                 agresividad_sunat=0.55, tasa_discrecionalidad=0.30, ...): ...
     def step(self): ...
-        # 1. agents.shuffle_do("step")  — orden aleatorio cada ciclo
-        # 2. datacollector.collect(self)
-    # métricas: pct_formal, pct_informal, pct_evasor, fondo_publico, recaudacion
+        # 1. Comerciante.shuffle_do("step")  — ajustan estrategia y resetean
+        # 2. Consumidor.shuffle_do("step")   — compran
+        # 3. Sunat.step()                    — fiscaliza
+        # 4. datacollector.collect(self)
+    # métricas: pct_formal, pct_evasor, pct_informal, recaudacion, multas, actas_preventivas
 ```
 
----
+## Orden del `step()`
 
-## Orden del `step()` (referencia)
+1. **Comerciantes** — deciden estrategia vía Logit, resetean ventas, descuentan costo fijo
+2. **Consumidores** — se mueven (Moore), eligen tienda por utilidad, compran
+3. **Sunat** — fiscaliza muestra, aplica multas/actas, fuerza informales a evasor
 
-1. `Comerciante.step()` — calcula precio, descuenta costo de formalidad, decide estrategia
-2. `Consumidor.step()` — elige tienda y compra
-3. `Sunat.step()` — fiscaliza objetivos y aplica multas
+## Convenciones
 
-El orden real es aleatorio (`shuffle_do`), pero cada agente solo lee estado que
-el modelo le pasa, no estado de otros agentes en el mismo ciclo — esto evita bugs
-de orden.
-
-## Reglas de oro para el handoff
-
-1. Los parámetros viven en `src/entorno.py`, no hardcodeados en agentes.
-2. La lógica de negocio en `.py`, los notebooks solo para correr y graficar.
-3. `agent_type=` en `agents.select()` es la forma de filtrar agentes por clase.
-4. `self.random` (stdlib `Random`) para todo RNG — no usar el módulo `random` global.
+1. Parámetros en `src/entorno.py` → modelo los recibe en `__init__` → agentes leen de `self.model.<param>`
+2. `self.random` (Mesa RNG) para todo RNG — no usar el módulo `random` global
+3. `agents.select(agent_type=Clase)` para filtrar agentes por tipo
+4. Nomenclatura: `'formal'` / `'evasor'` / `'informal'` (strings, no abreviaturas)
+5. Mesa 3.5 API: `Agent(model)` sin `unique_id`, `shuffle_do("step")`, `super().__init__(rng=seed)`
