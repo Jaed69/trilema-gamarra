@@ -26,8 +26,10 @@ discrecionalidad según la normatividad vigente.
 Estos datos se desarrollan y contrastan contra el modelo en las secciones §1bis
 (marco teórico y mapeo a parámetros), §1ter–1quater (resultados de calibración
 y hallazgos) y §1quinquies (comparación de políticas). El equilibrio del modelo
-alcanza **65.5% de informalidad**, a solo 4.7 pp del dato INEI, con los tres tipos
-coexistiendo: 34.5% formal, 53.4% evasor, 12.1% informal puro.
+alcanza **72.3% de informalidad**, a solo +2.1 pp del dato INEI, con los tres tipos
+coexistiendo: 27.7% formal, 59.8% evasor, 12.5% informal puro. El modelo incluye
+mecanismos adaptativos (bancarrota, entrada dinámica, SUNAT reactiva) que lo
+acercan al dato real.
 
 **Componentes del proyecto:**
 
@@ -153,49 +155,52 @@ modelo debe reflejar:
 
 ### Equilibrio del modelo (1000 ciclos, parámetros default)
 
-Tras migrar al modelo con valores reales (UIT 5500, RMV 1130, Logit Multinomial,
-gradualidad y discrecionalidad), el equilibrio en los últimos 100 ciclos:
+Tras arreglar bugs en ecuaciones de agentes (BUG 1-15) e implementar mecanismos
+adaptativos del mundo real (bancarrota, entrada dinámica, precios dinámicos,
+SUNAT reactiva, adaptación en Logit), el equilibrio en los últimos 100 ciclos:
 
 | Métrica | Modelo | Dato real (INEI/SUNAT) | Gap |
 |---|---|---|---|
-| Informalidad (informal + evasor) | **65.5%** | **70.2%** (EPEN 2025) | −4.7 pp |
-| Formal | 34.5% | ~29.8% (complemento) | +4.7 pp |
-| Evasor | 53.4% | (incluido en informal INEI) | — |
-| Informal puro | 12.1% | — | — |
-| Recaudación/ciclo | S/ 37,771 | — | — |
-| Multas/ciclo | 9,664 | — | — |
-| Actas preventivas/ciclo | 4,119 | — | — |
+| Informalidad (informal + evasor) | **72.3%** | **70.2%** (EPEN 2025) | +2.1 pp |
+| Formal | 27.7% | ~29.8% (complemento) | −2.1 pp |
+| Evasor | 59.8% | (incluido en informal INEI) | — |
+| Informal puro | 12.5% | — | — |
+| Recaudación/ciclo | S/ 33,873 | — | — |
+| Multas/ciclo | 22.1 | — | — |
+| Actas preventivas/ciclo | 9.7 | — | — |
+| Auditorías/ciclo | 44.0 | — | — |
+| Comerciantes activos | 80 (de 40 inicial) | — | — |
+| Agresividad efectiva SUNAT | 0.95 (de 0.55 base) | — | — |
 
-El modelo reproduce el rango del fenómeno (informalidad mayoritaria ~65-70%) con un
-gap de solo 4.7 pp. Los tres tipos coexisten: el **evasor** (53%) domina como
-estrategía racional de riesgo-recompensa, el **formal** (35%) sostiene el sector
-legal, y el **informal puro** (12%) representa al comercio ambulatorio no registrado.
+Con mecanismos adaptativos, el modelo se acerca al dato INEI con solo +2.1 pp
+de gap. SUNAT reactiva endurece la fiscalización al máximo (0.95) en respuesta
+a la evasión alta sostenida, lo que duplica las auditorías (44/ciclo vs 22 sin
+feedback) y triplica la recaudación por multas.
 
 ### Respuesta al parámetro de política (`agresividad_sunat`)
 
-| Agresividad | % Formal | % Evasor | % Informal | Informalidad total |
+| Agresividad base | % Formal | % Evasor | % Informal | Informalidad total |
 |---|---|---|---|---|
-| 0.25 (baja) | 31% | 53% | 16% | **69%** |
-| 0.55 (default) | 34% | 53% | 13% | **66%** |
-| 0.80 (alta) | 35% | 55% | 10% | **65%** |
+| 0.25 (baja) | 28% | 60% | 12% | **72%** |
+| 0.55 (default) | 28% | 60% | 13% | **72%** |
+| 0.80 (alta) | 30% | 62% | 8% | **70%** |
 
-**Lectura:** el modelo responde a la fiscalización, pero con **rendimientos
-decrecientes**: subir la agresividad de 0.25 a 0.80 solo reduce 4 pp de
-informalidad. Esto valida la conclusión del marco teórico: la fiscalización
-punitiva sola no resuelve el problema — se necesitan reformas estructurales.
+**Lectura:** con SUNAT reactiva, la agresividad base tiene menos impacto porque
+el feedback adaptativo la ajusta al máximo (0.95) en todos los casos. El modelo
+endurece automáticamente cuando la evasión supera 60% sostenido.
 
 ### Trayectoria temporal (default)
 
-| Ciclo | Formal | Evasor | Informal | Recaudación |
-|---|---|---|---|---|
-| 0 | ~25% | ~25% | ~50% | — |
-| 100 | 37.5% | 55.0% | 7.5% | S/ 26,056 |
-| 500 | 20.0% | 60.0% | 20.0% | S/ 41,450 |
-| 999 | 37.5% | 55.0% | 7.5% | S/ 30,011 |
+| Ciclo | Formal | Evasor | Informal | Recaudación | Multas | Actas |
+|---|---|---|---|---|---|---|
+| 0 | 32.5% | 60.0% | 7.5% | S/ 23,150 | 13 | 3 |
+| 100 | 30.0% | 56.2% | 13.8% | S/ 23,431 | 20 | 10 |
+| 500 | 23.8% | 56.2% | 20.0% | S/ 26,907 | 22 | 9 |
+| 999 | 22.5% | 63.8% | 13.8% | S/ 40,161 | 24 | 10 |
 
-El sistema oscila alrededor del equilibrio ~35/53/12: los informales puros son
-fiscalizados y forzados a evasores (registro aparente), algunos evasores son
-auditados y formalizados, y los formales con baja rentabilidad relajan su cumplimiento.
+El sistema oscila alrededor del equilibrio ~28/60/13: los formales declinan
+por bancarrota (B1), SUNAT endurece (B5), los informales son fiscalizados y
+forzados a evasores, y nuevos formales entran cuando el mercado se recupera (B2).
 
 ---
 
@@ -289,23 +294,108 @@ sostenido + reducción de costos formales + cultura tributaria.
 El modelo implementa tres políticas activables que pueden combinarse. Cada una se testeó
 por separado y en combo, corriendo 1000 ciclos y promediando los últimos 100:
 
-| Escenario | % Formal | % Evasor | % Informal | Informal total |
-|---|---|---|---|---|
-| Línea base | 35% | 53% | 12% | **65%** |
-| + Beneficio antigüedad | 35% | 53% | 12% | 65% |
-| + Sorteo comprobantes | 33% | 55% | 12% | 67% |
-| + Multa progresiva | 34% | 54% | 12% | 66% |
-| Combo (3 + costo ↓) | 35% | 53% | 13% | 65% |
+| Escenario | % Formal | % Evasor | % Informal | Informal total | Δ vs línea base |
+|---|---|---|---|---|---|
+| Línea base | 28% | 60% | 13% | **72%** | — |
+| + Beneficio antigüedad | 28% | 60% | 13% | 72% | 0pp |
+| + Sorteo comprobantes | 27% | 60% | 13% | 73% | +1pp |
+| + Multa progresiva | 28% | 60% | 12% | 72% | 0pp |
+| Combo (3 + costo ↓) | 28% | 61% | 11% | 72% | 0pp |
+| Más enforcement | 36% | 63% | 2% | 64% | −8pp |
 
-**Lectura:** con parámetros moderados, las políticas individuales tienen efectos pequeños
-— refleja la realidad del trilema: ninguna palanca aislada resuelve el problema. El
-dashboard interactivo permite explorar combinaciones con parámetros más agresivos
-(ej: `costo_fijo_formalidad=150`, `peso_moral=0.40`, `sorteo_comprobantes=True`) para
-encontrar el punto donde la formalidad se vuelve estructuralmente viable.
+**Lectura:** con SUNAT reactiva activa, las políticas individuales tienen efectos
+mínimos porque el feedback adaptativo ya está operando al máximo (agresividad
+efectiva = 0.95). Solo "Más enforcement" desplaza el equilibrio (−8pp) porque
+sube la base por encima del tope. El trilema persiste — ninguna palanca aislada
+resuelve el problema.
 
 **Uso del dashboard:** abrir `src/visualizacion.py` con Solara, seleccionar un preset
 (un click), y observar en tiempo real cómo los comerciantes cambian de color. Los 6
 presets pre-configurados cubren los escenarios más relevantes para política pública.
+
+---
+
+## 1sexies. Mecanismos Adaptativos del Mundo Real
+
+El modelo incluye 5 mecanismos de feedback que reproducen dinámicas de mercado reales.
+Estos NO son políticas activables (no se encienden/apagan con checkboxes) — son
+comportamientos emergentes del sistema que operan siempre.
+
+### B1. Bancarrota con cierre
+
+Si el capital de un comerciante cae bajo `UMBRAL_BANCARROTA` (S/ 500, ~10% del
+capital inicial), marca `en_quiebra=True` y deja de operar. No participa del
+mercado: no decide estrategia, no vende, no es auditado, no aparece en métricas.
+
+**Justificación:** en la realidad, un microcomerciante que no puede cubrir costos
+fijos cierra su negocio. El modelo anterior mantenía comerciantes zombis con
+capital negativo operando indefinidamente.
+
+**Impacto en el equilibrio:** reduce el número de formales (los más castigados
+por costo fijo), pero B2 compensa con entrada de nuevos cuando el mercado
+se recupera.
+
+### B2. Entrada dinámica de comerciantes
+
+Si el capital medio de los formales activos supera `UMBRAL_CRECIMIENTO`
+(S/ 20,000, 5x capital inicial) y hay espacio (`N activos < MAX_COMERCIANTES=80`),
+entra un nuevo comerciante formal con capital inicial S/ 4,000.
+
+**Justificación:** un mercado próspero atrae inversión. Si los formales están
+creciendo, es señal de que la formalidad es rentable, y nuevos comerciantes
+entran al sector.
+
+**Impacto:** el número de comerciantes oscila entre 40 y 80. En la línea base,
+crece de 40 a 80 en los primeros ciclos y se estabiliza.
+
+### B3. Precios dinámicos
+
+Cada comerciante ajusta su precio ±20% según sus ventas del ciclo anterior:
+- Ventas > 50/ciclo (alta demanda) → sube precio
+- Ventas < 50/ciclo (baja demanda) → baja precio
+
+El precio se calcula una vez al inicio del `step()` (no en cada llamada a
+`calcular_precio()`), almacenado en `self.precio_actual`.
+
+**Justificación:** en la realidad, un comerciante con alta demanda sube precios
+(captura margen), y uno con baja demanda los baja (captura mercado).
+
+### B4. Adaptación en Logit (riesgo percibido)
+
+Si `agresividad_efectiva > 0.80`, el riesgo percibido del formal sube 1.5x en
+`estimar_utilidad_futura`. El Logit naturalmente mueve al comerciante hacia
+evasor/informal sin forzar la transición.
+
+**Justificación:** cuando SUNAT endurece mucho, los formales perciben mayor
+riesgo de ser auditados y multados (incluso cumpliendo, hay costos transaccionales
+de auditoría). Algunos migran a evasión para evadir el escrutinio.
+
+### B5. SUNAT reactiva (feedback adaptativo)
+
+SUNAT mantiene un historial de los últimos 20 ciclos de % evasión. Si todos
+superan 60%, endurece: `agresividad_efectiva += 0.02` (tope 0.95). Si todos
+están bajo 50% (formales dominan), relaja: `agresividad_efectiva -= 0.01`
+(piso 0.05).
+
+**Justificación:** en la realidad, SUNAT ajusta su estrategia de fiscalización
+según los resultados observados. Si la evasión sube, destina más recursos a
+auditorías. Si baja, los reasigna.
+
+**Impacto:** en la línea base, `agresividad_efectiva` sube de 0.55 a 0.95
+en los primeros ~100 ciclos y se mantiene allí (evasión persistentemente alta).
+Esto duplica las auditorías (44/ciclo vs 22 sin feedback) y triplica la
+recaudación por multas.
+
+### Detección de colapsos (B6)
+
+El dashboard detecta 4 tipos de colapso del sistema:
+- **COLAPSO FORMAL:** % formal < 5% (sector formal casi extinto)
+- **COLAPSO AMBULANTE:** % informal > 80% (economía totalmente ambulante)
+- **COLAPSO FISCAL:** recaudación < S/ 2,000/ciclo (SUNAT no recauda)
+- **COLAPSO DEMANDA:** presupuesto medio > S/ 150 (consumidores no gastan)
+
+El modelo NO pausa ni auto-rescata — solo reporta el estado. El usuario puede
+observar cómo el sistema evoluciona hacia o desde el colapso.
 
 ---
 
@@ -461,33 +551,53 @@ depure el trabajo, dejar esto claro en el `README.md` del repo:
 
 ---
 
-## 6. Visualización Interactiva (Solara)
+## 6. Visualización Interactiva (Streamlit)
 
-El dashboard interactivo (`src/visualizacion.py`) usa **Solara** + el módulo nativo
-de visualización de Mesa 3.5. Corre en el navegador con controles de play/pause/step,
-sliders para variar parámetros en vivo, y un grid visual donde los comerciantes cambian
-de color según su estrategia.
+El dashboard interactivo (`src/visualizacion.py`) usa **Streamlit** + matplotlib
+para renderizar el grid y las gráficas. Es más estable que Solara (que tenía
+issues con Mesa 3.5). Corre en el navegador con controles de play/pause/step,
+sliders para variar parámetros en vivo, y un grid visual donde los comerciantes
+cambian de color según su estrategia.
+
+**Filosofía: 3 elementos, calidad sobre cantidad.** El dashboard prioriza señal
+sobre ruido: un grid visual, una gráfica de convergencia, y un panel de implicaciones.
 
 **Ejecución:**
 
 ```bash
-PYTHONPATH=. solara run src/visualizacion.py
+streamlit run src/visualizacion.py
 ```
 
 **Componentes del dashboard:**
 
-- **Grid visual (SpaceView):** comerciantes como cuadrados que cambian de color en tiempo
-  real — verde (formal), naranja (evasor), rojo (informal) — más consumidores azules
-  móviles y SUNAT como X negro
-- **19 sliders:** agresividad SUNAT, discrecionalidad, costo fijo formalidad, tasa IGV,
-  multa no emisión, alpha evasión, multa evasión %, sensibilidad mercado (beta), peso
-  precio, peso moral, N comerciantes, N consumidores, y parámetros de las 3 políticas
+- **Grid visual (SpaceView):** comerciantes como cuadrados grandes (size=120) que
+  cambian de color en tiempo real — verde (formal), naranja (evasor), rojo (informal) —
+  más consumidores azules atenuados (alpha=0.15) y SUNAT como X negro grande
+- **20 sliders:** agresividad SUNAT, discrecionalidad, costo fijo formalidad, tasa IGV,
+  multa no emisión, alpha evasión, multa evasión %, sensibilidad mercado (beta),
+  escala Logit, peso precio, peso moral, N comerciantes, N consumidores, y parámetros
+  de las 3 políticas activables
 - **3 checkboxes:** activar/desactivar beneficio por antigüedad, sorteo de comprobantes,
   multa progresiva por reincidencia
 - **6 botones de preset** (un click = escenario completo):
   - Línea base, Más enforcement, Subsidio formalidad, Cultura tributaria,
     Reducción tributaria, Combo reforma
-- **2 gráficas en vivo:** % de estrategias + recaudación, actualizándose cada ciclo
+- **1 gráfica de convergencia:** % estrategias (3 líneas) + línea vertical negra en
+  el ciclo de equilibrio + sombreado verde "zona estable" post-equilibrio + anotación
+  "Equilibrio @ ciclo X"
+- **Panel "Implicaciones del equilibrio":** texto narrativo auto-generado con:
+  - Estado del sistema (ESTABLE / PRÓSPERO / COLAPSO FORMAL / COLAPSO AMBULANTE / etc.)
+  - Agresividad SUNAT base vs efectiva (si divergen por B5 feedback)
+  - Composición post-equilibrio + delta vs línea base
+  - Zonas temporales (PRE-EQUILIBRIO / EQUILIBRIO / POST-EQUILIBRIO con valores)
+  - Capital por estrategia vs inicial (con ratios ×N)
+  - Texto descriptivo del escenario (qué es, qué espera, qué implica)
+- **Panel "Variables y su efecto":** tabla estática de 16 variables con qué controlan
+  y efecto esperado en el modelo
+
+**Detección de equilibrio:** el dashboard detecta cuándo la media móvil (ventana 50)
+de informalidad total deja de cambiar más de 1pp por 30 ciclos consecutivos. Marca
+ese ciclo con una línea vertical y sombrea la "zona estable" posterior.
 
 ```python
 # src/visualizacion.py — extracto del código real

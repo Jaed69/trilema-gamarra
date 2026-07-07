@@ -50,8 +50,24 @@ N_CONSUMIDORES = 800  # Gamarra recibe miles de compradores/día — volumen suf
 AGRESIVIDAD_SUNAT = 0.55  # % de comercios auditados por ciclo
 TASA_DISCRECIONALIDAD = 0.30  # prob. de acta preventiva vs multa (primera infracción)
 SENSIBILIDAD_MERCADO = 3.0  # beta del Logit Multinomial (racionalidad limitada)
+ESCALA_LOGIT = 10000.0  # normalización de utilidades para evitar overflow en exp()
 PESO_PRECIO = 0.80
 PESO_MORAL = 0.20
 WIDTH = 15
 HEIGHT = 15
 SEED = 42
+
+# Mecanismos adaptativos del mundo real
+UMBRAL_BANCARROTA = 500.0       # S/. 500 (~10% capital inicial) → comerciante cierra
+UMBRAL_CRECIMIENTO = 20000.0    # S/. 20,000 (5x capital inicial) → atrae nuevo entrante
+MAX_COMERCIANTES = 80           # tope entrada dinámica
+EVASION_ALTA = 60.0             # % evasión que dispara endurecimiento SUNAT
+EVASION_BAJA = 50.0             # % formal que relaja SUNAT
+SOSTENIMIENTO_FEEDBACK = 20     # ciclos para que SUNAT reaccione
+AJUSTE_AGRESIVIDAD_UP = 0.02    # +2pp agresividad/ciclo si evasión alta
+AJUSTE_AGRESIVIDAD_DOWN = 0.01  # -1pp agresividad/ciclo si formal alto
+MAX_AGRESIVIDAD = 0.95
+MIN_AGRESIVIDAD = 0.05
+VENTAS_NORMALES = 50            # referencia para precios dinámicos
+VENTAS_RANGO = 250              # escala para precios dinámicos
+MAX_VARIACION_PRECIO = 0.20     # ±20% sobre PRECIO_BASE por demanda
