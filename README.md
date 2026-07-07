@@ -15,21 +15,20 @@ evasión sube.
 
 | Métrica | Modelo | INEI (EPEN 2025) | Gap |
 |---|---|---|---|
-| Informalidad total | **72.3%** | 70.2% | +2.1 pp |
-| Formal | 27.7% | ~29.8% | — |
-| Evasor | 59.8% | — | — |
-| Informal puro | 12.5% | — | — |
+| Informalidad total | **63.9%** | 70.2% | −6.3 pp |
+| Formal | 36.1% | ~29.8% | — |
+| Evasor | 57.5% | — | — |
+| Informal puro | 6.5% | — | — |
 
-Con mecanismos adaptativos (bancarrota + entrada dinámica + SUNAT reactiva), el
-modelo se acerca al dato INEI con solo +2.1 pp de gap.
+Con mecanismos adaptativos (bancarrota + entrada dinámica + SUNAT reactiva) y 20 bugs
+corregidos, el modelo reproduce la realidad peruana con gap −6.3pp vs INEI.
 
 ## Stack
 
 - Python 3.14
 - Mesa 3.5.1 (`Agent`, `Model`, `MultiGrid`, `DataCollector`)
 - pandas / matplotlib (análisis y gráficas)
-- Solara 1.57 + altair (dashboard interactivo, opcional)
-- Streamlit 1.45 (dashboard interactivo, más estable que Solara)
+- Streamlit (dashboard interactivo)
 
 ## Cómo correr
 
@@ -64,7 +63,7 @@ trilema-gamarra/
 │   │   └── sunat.py         # fiscalización, discrecionalidad, multa progresiva, SUNAT reactiva
 │   ├── modelo.py            # ModeloGamarra: step bifásico, DataCollector, entrada dinámica
 │   ├── entorno.py           # UIT, RMV, IGV, multas, umbrales adaptativos — parámetros centralizados
-│   └── visualizacion.py     # dashboard Solara: 20 sliders, 6 presets, panel implicaciones
+│   └── visualizacion.py     # dashboard Streamlit: 20 sliders, 12 presets, panel implicaciones
 └── .venv/
 ```
 
@@ -98,7 +97,7 @@ que reproducen dinámicas de mercado reales:
 | Entrada dinámica | `UMBRAL_CRECIMIENTO=20000` | Si capital medio formal > S/ 20,000, entra nuevo comerciante formal |
 | Precios dinámicos | `VENTAS_NORMALES=50` | Precio sube/baja ±20% según ventas del ciclo anterior |
 | SUNAT reactiva | `EVASION_ALTA=60` | Si evasión > 60% sostenido 20 ciclos, `agresividad_efectiva += 0.02` |
-| Adaptación Logit | (automático) | Si `agresividad_efectiva > 0.80`, riesgo percibido del formal sube 1.5x |
+| Compliance cost | (automático) | Si `agresividad_efectiva > 0.80`, formal paga 2% revenue en audits/paperwork |
 
 La `agresividad_efectiva` puede divergir del slider base (`agresividad_sunat`)
 porque SUNAT la ajusta dinámicamente según el nivel de evasión observado.
@@ -122,7 +121,7 @@ streamlit run src/visualizacion.py
 - **Grid visual**: comerciantes cambian de color (verde/naranja/rojo) en tiempo real
 - **20 sliders**: fiscalización, costos, IGV, multas, mercado, consumidores, escala Logit
 - **3 checkboxes**: activar políticas nuevas
-- **6 presets**: Línea base, Más enforcement, Subsidio formalidad, Cultura tributaria, Reducción tributaria, Combo reforma
+- **12 presets**: Línea base, Más enforcement, Subsidio formalidad, Cultura tributaria, Reducción tributaria, Combo reforma, Paraíso formal, Reforma gradual, Mercado libre, Represión extrema, Crisis de demanda, Evasión incentivada
 - **1 gráfica de convergencia**: % estrategias + línea vertical de equilibrio + zona estable sombreada
 - **Panel "Implicaciones del equilibrio"**: estado del sistema, agresividad base vs efectiva, zonas temporales (pre/durante/post), capital por estrategia vs inicial, texto descriptivo por escenario, implicación de política
 - **Panel "Variables y su efecto"**: tabla estática de 16 variables con efecto esperado
@@ -145,7 +144,7 @@ class Comerciante(mesa.Agent):
 
     def estimar_utilidad_futura(self, est: str) -> float: ...
         # utilidad neta esperada por estrategia
-        # B4: si agresividad_efectiva > 0.80, riesgo percibido del formal sube 1.5x
+        # B4: si agresividad_efectiva > 0.80, formal paga 2% revenue compliance cost
 
     def ajustar_cumplimiento(self) -> None: ...
         # transición probabilística vía Logit Multinomial

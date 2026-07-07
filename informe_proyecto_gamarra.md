@@ -26,10 +26,10 @@ discrecionalidad según la normatividad vigente.
 Estos datos se desarrollan y contrastan contra el modelo en las secciones §1bis
 (marco teórico y mapeo a parámetros), §1ter–1quater (resultados de calibración
 y hallazgos) y §1quinquies (comparación de políticas). El equilibrio del modelo
-alcanza **72.3% de informalidad**, a solo +2.1 pp del dato INEI, con los tres tipos
-coexistiendo: 27.7% formal, 59.8% evasor, 12.5% informal puro. El modelo incluye
-mecanismos adaptativos (bancarrota, entrada dinámica, SUNAT reactiva) que lo
-acercan al dato real.
+alcanza **63.9% de informalidad**, a solo −6.3 pp del dato INEI, con los tres tipos
+coexistiendo: 36.1% formal, 57.5% evasor, 6.5% informal puro. El modelo incluye
+mecanismos adaptativos (bancarrota, entrada dinámica, SUNAT reactiva, precios
+dinámicos, compliance cost) y 20 bugs corregidos en las ecuaciones de agentes.
 
 **Componentes del proyecto:**
 
@@ -161,46 +161,48 @@ SUNAT reactiva, adaptación en Logit), el equilibrio en los últimos 100 ciclos:
 
 | Métrica | Modelo | Dato real (INEI/SUNAT) | Gap |
 |---|---|---|---|
-| Informalidad (informal + evasor) | **72.3%** | **70.2%** (EPEN 2025) | +2.1 pp |
-| Formal | 27.7% | ~29.8% (complemento) | −2.1 pp |
-| Evasor | 59.8% | (incluido en informal INEI) | — |
-| Informal puro | 12.5% | — | — |
-| Recaudación/ciclo | S/ 33,873 | — | — |
-| Multas/ciclo | 22.1 | — | — |
-| Actas preventivas/ciclo | 9.7 | — | — |
-| Auditorías/ciclo | 44.0 | — | — |
+| Informalidad (informal + evasor) | **63.9%** | **70.2%** (EPEN 2025) | −6.3 pp |
+| Formal | 36.1% | ~29.8% (complemento) | +6.3 pp |
+| Evasor | 57.5% | (incluido en informal INEI) | — |
+| Informal puro | 6.5% | — | — |
+| Recaudación/ciclo | S/ 40,112 | — | — |
+| Multas/ciclo | 27.2 | — | — |
+| Actas preventivas/ciclo | 11.5 | — | — |
+| Auditorías/ciclo | 61.0 | — | — |
 | Comerciantes activos | 80 (de 40 inicial) | — | — |
-| Agresividad efectiva SUNAT | 0.95 (de 0.55 base) | — | — |
+| Agresividad efectiva SUNAT | 0.77 (de 0.55 base) | — | — |
 
-Con mecanismos adaptativos, el modelo se acerca al dato INEI con solo +2.1 pp
-de gap. SUNAT reactiva endurece la fiscalización al máximo (0.95) en respuesta
-a la evasión alta sostenida, lo que duplica las auditorías (44/ciclo vs 22 sin
-feedback) y triplica la recaudación por multas.
+Con 20 bugs corregidos y mecanismos adaptativos (B1-B5), el modelo reproduce la
+realidad peruana con gap −6.3pp vs INEI. SUNAT reactiva endurece automáticamente
+de 0.55 a 0.77, duplicando las auditorías y la recaudación por multas respecto
+al modelo original sin feedback.
 
 ### Respuesta al parámetro de política (`agresividad_sunat`)
 
 | Agresividad base | % Formal | % Evasor | % Informal | Informalidad total |
 |---|---|---|---|---|
-| 0.25 (baja) | 28% | 60% | 12% | **72%** |
-| 0.55 (default) | 28% | 60% | 13% | **72%** |
-| 0.80 (alta) | 30% | 62% | 8% | **70%** |
+| 0.05 (SUNAT mínima) | 31% | 67% | 2% | **69%** |
+| 0.55 (default) | 36% | 58% | 7% | **64%** |
+| 0.90 (enforcement) | 45% | 53% | 2% | **55%** |
+| 0.95 (represión extrema) | 51% | 48% | 1% | **49%** |
 
-**Lectura:** con SUNAT reactiva, la agresividad base tiene menos impacto porque
-el feedback adaptativo la ajusta al máximo (0.95) en todos los casos. El modelo
-endurece automáticamente cuando la evasión supera 60% sostenido.
+**Lectura:** la agresividad base sí importa — pasar de 0.55 a 0.90 sube la formalidad
+de 36% a 45% (−10pp informalidad). Pero pasar de 0.90 a 0.95 da rendimientos
+decrecientes (+5pp formal). El costo: con 0.95 hay quiebras masivas (9 comerciantes).
 
 ### Trayectoria temporal (default)
 
 | Ciclo | Formal | Evasor | Informal | Recaudación | Multas | Actas |
 |---|---|---|---|---|---|---|
-| 0 | 32.5% | 60.0% | 7.5% | S/ 23,150 | 13 | 3 |
-| 100 | 30.0% | 56.2% | 13.8% | S/ 23,431 | 20 | 10 |
-| 500 | 23.8% | 56.2% | 20.0% | S/ 26,907 | 22 | 9 |
-| 999 | 22.5% | 63.8% | 13.8% | S/ 40,161 | 24 | 10 |
+| 0 | 37.5% | 55.0% | 7.5% | S/ 25,776 | 10 | 7 |
+| 100 | 36.2% | 57.5% | 6.2% | S/ 35,468 | 20 | 10 |
+| 500 | 31.2% | 56.2% | 12.5% | S/ 29,201 | 17 | 17 |
+| 999 | 35.0% | 58.8% | 6.2% | S/ 26,730 | 20 | 19 |
 
-El sistema oscila alrededor del equilibrio ~28/60/13: los formales declinan
-por bancarrota (B1), SUNAT endurece (B5), los informales son fiscalizados y
-forzados a evasores, y nuevos formales entran cuando el mercado se recupera (B2).
+El sistema oscila alrededor del equilibrio ~36/58/7: los formales declinan
+por bancarrota (B1), SUNAT endurece (B5) de 0.55 a 0.77, los informales son
+fiscalizados y forzados a evasores, y nuevos formales entran cuando el mercado
+se recupera (B2).
 
 ---
 
@@ -289,25 +291,31 @@ sostenido + reducción de costos formales + cultura tributaria.
 
 ---
 
-## 1quinquies. Comparación de Políticas Activables
+## 1quinquies. Comparación de Escenarios de Política
 
-El modelo implementa tres políticas activables que pueden combinarse. Cada una se testeó
-por separado y en combo, corriendo 1000 ciclos y promediando los últimos 100:
+El modelo permite comparar 12 escenarios con un click en el dashboard Streamlit. Cada
+uno modifica diferentes combinaciones de parámetros. Se testeó cada escenario corriendo
+1000 ciclos y promediando los últimos 100:
 
-| Escenario | % Formal | % Evasor | % Informal | Informal total | Δ vs línea base |
-|---|---|---|---|---|---|
-| Línea base | 28% | 60% | 13% | **72%** | — |
-| + Beneficio antigüedad | 28% | 60% | 13% | 72% | 0pp |
-| + Sorteo comprobantes | 27% | 60% | 13% | 73% | +1pp |
-| + Multa progresiva | 28% | 60% | 12% | 72% | 0pp |
-| Combo (3 + costo ↓) | 28% | 61% | 11% | 72% | 0pp |
-| Más enforcement | 36% | 63% | 2% | 64% | −8pp |
+| Escenario | Formal | Evasor | Informal | Informal total | Δ vs línea base | Recaudación |
+|---|---|---|---|---|---|---|
+| Línea base | 36% | 58% | 7% | **64%** | — | S/ 40k |
+| Más enforcement | 45% | 53% | 2% | **55%** | −9pp | S/ 95k |
+| Subsidio formalidad | 35% | 58% | 7% | 65% | +1pp | S/ 40k |
+| Cultura tributaria | 35% | 58% | 7% | 65% | +1pp | S/ 40k |
+| Reducción tributaria | 35% | 57% | 8% | 65% | +1pp | S/ 38k |
+| Combo reforma | 37% | 57% | 6% | 63% | −1pp | S/ 42k |
+| Paraíso formal | 35% | 52% | 12% | 64% | 0pp | S/ 38k |
+| Reforma gradual | 36% | 57% | 7% | 64% | 0pp | S/ 40k |
+| Mercado libre | 31% | 67% | 2% | 69% | +5pp | S/ 38k |
+| Represión extrema | **51%** | 48% | **0.5%** | **49%** | −15pp | S/ 150k |
+| Crisis de demanda | 37% | 56% | 7% | 63% | −1pp | S/ 25k |
+| Evasión incentivada | 35% | 58% | 7% | 65% | +1pp | S/ 38k |
 
-**Lectura:** con SUNAT reactiva activa, las políticas individuales tienen efectos
-mínimos porque el feedback adaptativo ya está operando al máximo (agresividad
-efectiva = 0.95). Solo "Más enforcement" desplaza el equilibrio (−8pp) porque
-sube la base por encima del tope. El trilema persiste — ninguna palanca aislada
-resuelve el problema.
+**Lectura:** solo 2 escenarios desplazan el equilibrio significativamente. "Más
+enforcement" (−9pp) y "Represión extrema" (−15pp) reducen informalidad, pero a
+costo de quiebras y destrucción de mercado. Esto confirma el trilema: la represión
+punitiva funciona en reducir informalidad pero destruye el tejido microempresarial.
 
 **Uso del dashboard:** abrir `src/visualizacion.py` con Solara, seleccionar un preset
 (un click), y observar en tiempo real cómo los comerciantes cambian de color. Los 6
@@ -360,15 +368,21 @@ El precio se calcula una vez al inicio del `step()` (no en cada llamada a
 **Justificación:** en la realidad, un comerciante con alta demanda sube precios
 (captura margen), y uno con baja demanda los baja (captura mercado).
 
-### B4. Adaptación en Logit (riesgo percibido)
+### B4. Compliance cost del formal
 
-Si `agresividad_efectiva > 0.80`, el riesgo percibido del formal sube 1.5x en
-`estimar_utilidad_futura`. El Logit naturalmente mueve al comerciante hacia
-evasor/informal sin forzar la transición.
+Si `agresividad_efectiva > 0.80`, el formal paga un costo de cumplimiento
+del 2% de su ingreso neto en `estimar_utilidad_futura`. Es un costo proporcional
+al revenue (no plano), que representa auditorías, paperwork y tiempo perdido
+cuando SUNAT endurece.
+
+**Nota técnica:** antes este mecanismo usaba un penalty plano de −1000 a −1500
+(BUG 4 en el diseño original), lo que hacía que el formal siempre fuera negativo
+y el evasor dominara en todos los escenarios. Tras el fix (proporcional), el
+modelo produce resultados variados y realistas por escenario.
 
 **Justificación:** cuando SUNAT endurece mucho, los formales perciben mayor
-riesgo de ser auditados y multados (incluso cumpliendo, hay costos transaccionales
-de auditoría). Algunos migran a evasión para evadir el escrutinio.
+costo de cumplimiento (auditorías frecuentes, papeleo adicional). El Logit
+naturalmente mueve al comerciante hacia evasor/informal sin forzar la transición.
 
 ### B5. SUNAT reactiva (feedback adaptativo)
 
@@ -381,10 +395,11 @@ están bajo 50% (formales dominan), relaja: `agresividad_efectiva -= 0.01`
 según los resultados observados. Si la evasión sube, destina más recursos a
 auditorías. Si baja, los reasigna.
 
-**Impacto:** en la línea base, `agresividad_efectiva` sube de 0.55 a 0.95
-en los primeros ~100 ciclos y se mantiene allí (evasión persistentemente alta).
-Esto duplica las auditorías (44/ciclo vs 22 sin feedback) y triplica la
-recaudación por multas.
+**Impacto:** en la línea base, `agresividad_efectiva` sube de 0.55 a 0.77
+y oscila alrededor de ese valor. La auditorías suben a 61/ciclo (vs 22 que
+serían con agresividad base). La recaudación por multas crece proporcionalmente.
+SUNAT no llega al tope (0.95) porque la evasión no siempre supera 60% sostenido —
+oscila, lo que refleja un equilibrio dinámico más realista.
 
 ### Detección de colapsos (B6)
 
@@ -663,17 +678,19 @@ def Page():
 | 0. Setup | ✓ Completado | Repo + diseño + parámetros reales |
 | 1. Agentes base | ✓ Completado | 3 clases con Logit Multinomial, Moore, fiscalización |
 | 2. Integración | ✓ Completado | ModeloGamarra con step bifásico + DataCollector |
-| 3. Experimentos | ✓ Completado | Sweep de agresividad + comparación de políticas |
-| 4. Dashboard + Notebook | ✓ Completado | Solara (19 sliders, 6 presets) + notebook Colab |
-| 5. Informe final | ✓ Completado | Este documento + hallazgos + recomendaciones |
+| 3. Experimentos | ✓ Completado | Sweep de agresividad + 12 escenarios |
+| 4. Dashboard + Notebook | ✓ Completado | Streamlit (20 sliders, 12 presets) + notebook auto-contenido |
+| 5. Informe final | ✓ Completado | Este documento + 20 bugs corregidos + mecanismos B1-B6 |
+| 6. Mejoras (extra) | ✓ Completado | Mecanismos adaptativos (B1-B5), 20 bug fixes, detección colapsos |
 
 **Commits clave:**
 
 | Commit | Descripción |
 |---|---|
+| `c27b1ae` | **20 bug fixes (1-20)** + 5 mecanismos adaptativos + Streamlit + 12 escenarios |
+| `7e2b032` | Notebook auto-contenido regenerado con código actual |
 | `0b5885c` | Fase 1: lógica real en los 3 agentes + step bifásico |
 | `952b93e` | Marco teórico + recalibración con datos INEI |
 | `d2242df` | Migración a valores reales (UIT, RMV) + Logit Multinomial |
 | `4cda5d7` | Dashboard interactivo + 3 políticas activables |
-| `902fc95` | Notebook auto-contenido para Google Colab |
 | `20d686b` | Informe actualizado con políticas y dashboard |
